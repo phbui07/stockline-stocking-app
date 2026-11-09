@@ -94,6 +94,32 @@ export const formatDateTime = (ms: number, lang: Lang) =>
     minute: '2-digit',
   });
 
+// A market date ('2026-11-10') is a calendar day, not a moment, so it's
+// formatted in UTC to show the same day in every time zone.
+export const formatMarketDate = (
+  date: string,
+  lang: Lang,
+  {weekday = false, year = true} = {},
+) =>
+  new Date(`${date}T12:00:00Z`).toLocaleDateString(locale(lang), {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'short',
+    ...(year ? {year: 'numeric'} : {}),
+    ...(weekday ? {weekday: 'short'} : {}),
+  });
+
+// Keeps what the user types to digits and one decimal point, with at most
+// `decimals` decimals. Vietnamese keyboards type a comma as the decimal
+// separator, so a comma counts as the point.
+export const cleanDecimalInput = (text: string, decimals: number) => {
+  const [whole, ...rest] = text
+    .replace(/,/g, '.')
+    .replace(/[^0-9.]/g, '')
+    .split('.');
+  return rest.length ? `${whole}.${rest.join('').slice(0, decimals)}` : whole;
+};
+
 export const formatTime = (ms: number, lang: Lang) =>
   new Date(ms).toLocaleTimeString(locale(lang), {
     hour: '2-digit',

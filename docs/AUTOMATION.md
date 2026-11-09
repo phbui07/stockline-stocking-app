@@ -9,7 +9,7 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
 | Phase | Feature | Status |
 |---|---|---|
 | 0 | Foundations: price-data interface, market dates, fractional shares, lots, trade sources and reasons | Done |
-| 1 | Recurring investments (dollar-cost averaging) | |
+| 1 | Recurring investments (dollar-cost averaging) | Done |
 | 2 | Automatic risk rules: stop-loss, take-profit, trailing stop | |
 | 3 | Strategy engine and moving-average crossover bot | |
 | 4 | Backtester | |
@@ -21,6 +21,12 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
 ## Where the code lives
 
 - `services/engine/`: the engine. Pure TypeScript with no React and no network, so every rule can be unit tested with small, hand-calculated price series.
+  - `dates.ts`: market dates.
+  - `recurring.ts`: recurring-investment schedules.
+  - `runner.ts`: replays missed days in order. Each phase adds its step to the same day-by-day loop.
+- `services/automation.tsx`: saves each user's automations (`stockline.automation.<email>`), downloads prices and calls the runner. It runs when the app opens, when it returns from the background, every 15 minutes while it's open, after a rule changes, and on "Check now".
+- `services/reasons.ts`: turns stored reasons and schedules into sentences in the current language.
+- `views/automation/`: the Automate screens.
 - `services/data/`: daily prices.
   - `types.ts`: the `DailyPriceProvider` interface.
   - `yahooProvider.ts`: the real prices.
@@ -54,6 +60,21 @@ These keep the simulation simple. Each one is a known gap from real trading.
   - Buying fees are included in a lot's cost.
 - **Splits:** prices are always quoted in the shares that exist on the day you look. A lot remembers which day's shares it's counted in (`unitsAsOf`). After a split, `applySplit` converts older lots: 1 share at $1,000 becomes 10 shares at $100.
 - **Dividends** are not paid into the live portfolio. Backtests include them through adjusted prices.
+
+## Recurring investments (Phase 1)
+
+- **Schedules:**
+  - weekly or every 2 weeks on a chosen weekday;
+  - monthly on day 1 to 28. Days 29–31 are left out so every month has the day.
+- **When they start:** a new rule starts at the first close that isn't known yet, so it never buys at a price you've already seen. Development builds can pick a past start date to test catching up.
+- **Weekends and holidays:** a purchase fills at the close of the first trading day on or after its date.
+- **Each purchase** buys the amount's worth of shares, rounded down to a millionth of a share so it never costs more than the amount.
+- **Not enough cash:** the purchase is skipped and logged. It isn't made up later.
+- **Pausing:** purchases that fall while a rule is paused are skipped. Resuming continues from the next open day.
+- **Several rules on the same day:** the oldest rule gets the cash first.
+- **No double purchases:** each purchase has a fixed id (`recurring:<rule>:<date>`), so a run repeated after a crash doesn't buy twice.
+- **Splits:** the runner downloads split events for held stocks and converts older lots (see Assumptions).
+- **Order of trade history:** catch-up purchases are dated at their past close, so `executeOrder` inserts trades by date to keep the history newest first.
 
 ## Saved-data versions
 

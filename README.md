@@ -6,6 +6,7 @@ Stockline is a stock-tracking and practice-trading app built with React Native 0
 
 - **Live market data:** quotes, intraday sparklines, 1D–5Y charts, symbol search and news from Yahoo Finance. Prices refresh every 20 seconds while the app is in the foreground.
 - **Practice trading:** every account starts with $100,000 in virtual cash. Buy and sell orders fill instantly at the latest price. Holdings, average cost, unrealized and realized P&L, trade history and a portfolio performance chart are computed from your trades.
+- **Recurring investments** (Home or Trade → Automate): buy a fixed dollar amount of a stock or ETF every week, every 2 weeks or every month, in fractional shares. Purchases fill at each day's closing price, and missed days are caught up when the app opens. See [docs/AUTOMATION.md](docs/AUTOMATION.md).
 - **Growth rankings** (Home → Growth rankings): about 100 large US companies ranked by price change over the latest day, week, month or year, showing either the top gainers or the top losers.
 - **Watchlist** you can search and sort, and **price alerts** that send a notification when a target is crossed while the app is open.
 - **On-device accounts:** sign up, log in, or continue as a guest without an account. You stay logged in, and can log out, change your name and password, verify a phone number, and reset a forgotten password with a 5-digit code delivered as a local notification.

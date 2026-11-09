@@ -1,5 +1,6 @@
 import type {ChartPoint, Quote} from './marketData';
 import {MarketDate, toMarketDate} from './engine/dates';
+import {cleanDecimalInput} from './format';
 
 // Paper trading: orders fill instantly at the given price against a virtual
 // cash balance. Everything here is pure so it can be unit tested.
@@ -130,18 +131,9 @@ const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 export const roundShares = (value: number) =>
   Math.round(value * SHARE_UNIT) / SHARE_UNIT;
 
-// Cleans what the user types as a share quantity: digits and one decimal
-// point, with at most SHARE_DECIMALS decimals. Vietnamese keyboards type a
-// comma as the decimal separator, so a comma counts as the point.
-export const cleanSharesInput = (text: string) => {
-  const [whole, ...rest] = text
-    .replace(/,/g, '.')
-    .replace(/[^0-9.]/g, '')
-    .split('.');
-  return rest.length
-    ? `${whole}.${rest.join('').slice(0, SHARE_DECIMALS)}`
-    : whole;
-};
+// Cleans what the user types as a share quantity (see cleanDecimalInput).
+export const cleanSharesInput = (text: string) =>
+  cleanDecimalInput(text, SHARE_DECIMALS);
 
 // The text to show in a quantity box for a number of shares.
 export const sharesToInput = (shares: number) =>
@@ -273,13 +265,20 @@ export const executeOrder = (
   if (tax) {
     transaction.tax = tax;
   }
+  // Keep the history newest first. A manual trade is always the newest, but
+  // an automation catching up fills a past day's close, which may be older
+  // than trades already in the list, so insert by date.
+  const at = portfolio.transactions.findIndex(t => t.date <= date);
+  const transactions =
+    at === -1
+      ? [...portfolio.transactions, transaction]
+      : [
+          ...portfolio.transactions.slice(0, at),
+          transaction,
+          ...portfolio.transactions.slice(at),
+        ];
   return {
-    portfolio: {
-      ...portfolio,
-      cash,
-      positions,
-      transactions: [transaction, ...portfolio.transactions],
-    },
+    portfolio: {...portfolio, cash, positions, transactions},
     transaction,
   };
 };

@@ -15,6 +15,13 @@ import {Notifications} from 'react-native-notifications';
 import App from '../App';
 import {refreshQuotes, resetQuoteStore} from '../services/quoteStore';
 import {clearMarketDataCache} from '../services/marketData';
+import {getPriceProvider, setPriceProvider} from '../services/data';
+import {MockPriceProvider} from '../services/data/mockProvider';
+import {
+  addDays,
+  dayOfWeek,
+  lastCompletedMarketDate,
+} from '../services/engine/dates';
 
 // Charts start Animated timers on mount that outlive the test file; the
 // flows don't exercise charts, so render them as nothing.
@@ -358,6 +365,91 @@ it('upgrades a portfolio saved by the old app and buys fractional shares', async
   expect(saved.portfolio.positions.AAPL.shares).toBe(10.5);
   expect(saved.portfolio.positions.AAPL.lots).toHaveLength(2);
   expect(screen.getByTestId('detail-position')).toHaveTextContent(/10\.5/);
+});
+
+describe('recurring investments', () => {
+  const realProvider = getPriceProvider();
+  afterEach(() => setPriceProvider(realProvider));
+
+  it('creates a rule, catches up on missed weeks, then pauses, edits and deletes it', async () => {
+    // Offline daily closes on the same weekday for the last three weeks:
+    // $100, then $125, then $80.
+    const last = lastCompletedMarketDate();
+    const days = [addDays(last, -14), addDays(last, -7), last];
+    setPriceProvider(
+      new MockPriceProvider({AAPL: {dates: days, closes: [100, 125, 80]}}),
+    );
+    prices.AAPL = 80; // the live quote the form shows
+
+    await startLoggedIn();
+    await fireEvent.press(screen.getByTestId('home-automate'));
+    expect(
+      await screen.findByText('Chưa có khoản đầu tư định kỳ nào.'),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('recurring-add'));
+    await fireEvent.press(await screen.findByTestId('search-result-AAPL'));
+
+    // Save stays disabled until the amount is valid.
+    await fireEvent.changeText(
+      await screen.findByTestId('recurring-amount'),
+      '0,5',
+    );
+    expect(screen.getByTestId('recurring-save')).toBeDisabled();
+    await fireEvent.changeText(screen.getByTestId('recurring-amount'), '100');
+    await fireEvent.press(screen.getByTestId('recurring-frequency-weekly'));
+    await fireEvent.press(
+      screen.getByTestId(`recurring-weekday-${dayOfWeek(last)}`),
+    );
+    // Development builds can start in the past to test catching up.
+    await fireEvent.changeText(screen.getByTestId('recurring-start'), days[0]);
+    await waitFor(() =>
+      expect(screen.getByTestId('recurring-save')).toBeEnabled(),
+    );
+    await fireEvent.press(screen.getByTestId('recurring-save'));
+
+    // The runner buys $100 at each week's close: 1 + 0.8 + 1.25 shares.
+    await waitFor(() =>
+      expect(screen.getAllByTestId('recurring-history-row')).toHaveLength(3),
+    );
+    expect(screen.getByText('$300.00')).toBeOnTheScreen(); // invested
+    let saved = await savedUserData();
+    expect(saved.portfolio.cash).toBe(100000 - 300);
+    expect(saved.portfolio.positions.AAPL.shares).toBe(3.05);
+    expect(saved.portfolio.transactions[0]).toMatchObject({
+      source: 'recurring',
+      price: 80,
+    });
+
+    await fireEvent.press(screen.getByTestId('recurring-toggle'));
+    expect(screen.getByTestId('recurring-status')).toHaveTextContent(
+      'Tạm dừng',
+    );
+    await fireEvent.press(screen.getByTestId('recurring-toggle'));
+    expect(screen.getByTestId('recurring-status')).toHaveTextContent(
+      'Đang chạy',
+    );
+
+    await fireEvent.press(screen.getByTestId('recurring-edit'));
+    await fireEvent.changeText(
+      await screen.findByTestId('recurring-amount'),
+      '50',
+    );
+    await fireEvent.press(screen.getByTestId('recurring-save'));
+    expect(await screen.findByText('AAPL · $50.00')).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId('recurring-delete'));
+    await pressAlert('Xóa');
+    expect(
+      await screen.findByText('Chưa có khoản đầu tư định kỳ nào.'),
+    ).toBeOnTheScreen();
+    // Its purchases stay in the portfolio.
+    saved = await savedUserData();
+    expect(saved.portfolio.transactions).toHaveLength(3);
+    const automation = JSON.parse(
+      (await AsyncStorage.getItem(`stockline.automation.${DEMO.email}`))!,
+    );
+    expect(automation.recurring).toEqual([]);
+  }, 20000);
 });
 
 it('adds and removes stocks from the watchlist', async () => {

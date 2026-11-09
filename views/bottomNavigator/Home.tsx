@@ -94,6 +94,16 @@ const Home = () => {
           </View>
           {nextIcon(vw(7), vw(7), '#FFED4B')}
         </TouchableOpacity>
+        <TouchableOpacity
+          testID="home-automate"
+          style={styles.moversCard}
+          onPress={() => navigation.navigate('Automate')}>
+          <View style={styles.moversText}>
+            <Text style={styles.nameText}>{t('home.automate')}</Text>
+            <Text style={styles.shortNameText}>{t('home.automateDesc')}</Text>
+          </View>
+          {nextIcon(vw(7), vw(7), '#FFED4B')}
+        </TouchableOpacity>
         <FollowView
           symbols={data.watchlist}
           quotes={quotes}

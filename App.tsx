@@ -38,9 +38,13 @@ import Security from './views/profile/Security';
 import Language from './views/profile/Language';
 import Settings from './views/profile/Settings';
 import FAQ from './views/profile/FAQ';
+import Automate from './views/automation/Automate';
+import RecurringEdit from './views/automation/RecurringEdit';
+import RecurringDetail from './views/automation/RecurringDetail';
 import {LanguageProvider} from './services/i18n';
 import {SessionProvider, useSession} from './services/session';
 import {UserDataProvider} from './services/userData';
+import {AutomationProvider} from './services/automation';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -166,6 +170,10 @@ const RootNavigator = () => {
         <Stack.Screen name="Insights" component={Insights} />
         <Stack.Screen name="TopMovers" component={TopMovers} />
         <Stack.Screen name="Watchlist" component={Watchlist} />
+        {/* Automation */}
+        <Stack.Screen name="Automate" component={Automate} />
+        <Stack.Screen name="RecurringEdit" component={RecurringEdit} />
+        <Stack.Screen name="RecurringDetail" component={RecurringDetail} />
         {/* Profile */}
         <Stack.Screen name="Account" component={Account} />
         <Stack.Screen name="Security" component={Security} />
@@ -189,7 +197,9 @@ const App = () => (
   <LanguageProvider>
     <SessionProvider>
       <UserDataProvider>
-        <RootNavigator />
+        <AutomationProvider>
+          <RootNavigator />
+        </AutomationProvider>
       </UserDataProvider>
     </SessionProvider>
   </LanguageProvider>

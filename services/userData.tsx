@@ -66,6 +66,9 @@ interface UserDataValue {
   data: UserData;
   loaded: boolean;
   placeOrder: (order: OrderInput) => Transaction;
+  // Applies a change to the latest portfolio right away, for automations.
+  // Returning the same object means nothing changed, and nothing is saved.
+  updatePortfolio: (change: (portfolio: Portfolio) => Portfolio) => Portfolio;
   isWatched: (symbol: string) => boolean;
   toggleWatch: (symbol: string) => void;
   addAlert: (
@@ -183,6 +186,14 @@ export const UserDataProvider: React.FC<{children: React.ReactNode}> = ({
         const result = executeOrder(dataRef.current.portfolio, order);
         update(current => ({...current, portfolio: result.portfolio}));
         return result.transaction;
+      },
+      updatePortfolio: change => {
+        const before = dataRef.current.portfolio;
+        const after = change(before);
+        if (after !== before) {
+          update(current => ({...current, portfolio: after}));
+        }
+        return after;
       },
       isWatched: symbol => data.watchlist.includes(symbol),
       toggleWatch: symbol =>

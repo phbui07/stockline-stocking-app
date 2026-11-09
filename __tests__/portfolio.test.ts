@@ -179,6 +179,15 @@ describe('fractional shares and lots', () => {
     expect(portfolio.cash).toBe(10070);
   });
 
+  it('keeps the history newest first when an older trade is added', () => {
+    // A manual trade today, then an automation fills last week's close.
+    let p = buy(createPortfolio(10000, 0), 'AAPL', 1, 100, 500);
+    p = buy(p, 'SPY', 1, 100, 300);
+    p = buy(p, 'MSFT', 1, 100, 100);
+    p = buy(p, 'NVDA', 1, 100, 600);
+    expect(p.transactions.map(t => t.date)).toEqual([600, 500, 300, 100]);
+  });
+
   it('records who placed a trade and why', () => {
     const {transaction} = executeOrder(createPortfolio(1000, 0), {
       side: 'BUY',

@@ -479,6 +479,85 @@ const vi = {
   'faq.q6': 'Dữ liệu của tôi được lưu ở đâu?',
   'faq.a6':
     'Tài khoản, danh mục và lịch sử giao dịch được lưu ngay trên thiết bị này. Gỡ ứng dụng sẽ xóa toàn bộ dữ liệu.',
+  // Automate
+  'home.automate': 'Tự động hóa',
+  'home.automateDesc': 'Đầu tư định kỳ và thử nghiệm chiến lược bằng tiền ảo',
+  'automate.title': 'Tự động hóa',
+  'automate.intro':
+    'Các tự động hóa giao dịch theo giá đóng cửa mỗi ngày. Chúng chạy khi ứng dụng đang mở và bù lại những ngày bạn đã bỏ lỡ.',
+  'automate.checking': 'Đang kiểm tra giá…',
+  'automate.lastRun': 'Kiểm tra lần cuối {time}. Giá đến hết ngày {date}.',
+  'automate.neverRun': 'Giá được kiểm tra mỗi khi bạn mở ứng dụng.',
+  'automate.failed': 'Không tải được giá của {symbols}. Sẽ thử lại lần sau.',
+  'automate.runNow': 'Kiểm tra ngay',
+
+  // Recurring investments
+  'recurring.title': 'Đầu tư định kỳ',
+  'recurring.explain':
+    'Mua một số tiền cố định theo lịch, bất kể giá. Giá thấp thì mua được nhiều cổ phiếu hơn, giá cao thì ít hơn. Cách này gọi là bình quân giá (DCA).',
+  'recurring.add': 'Tạo mới',
+  'recurring.empty': 'Chưa có khoản đầu tư định kỳ nào.',
+  'recurring.newTitle': 'Đầu tư định kỳ mới',
+  'recurring.editTitle': 'Sửa đầu tư định kỳ',
+  'recurring.amount': 'Số tiền mỗi lần mua',
+  'recurring.amountRange': 'Từ {min} đến {max}',
+  'recurring.frequency': 'Tần suất',
+  'recurring.weekdayLabel': 'Ngày trong tuần',
+  'recurring.dayLabel': 'Ngày trong tháng',
+  'recurring.day': 'Ngày {day}',
+  'recurring.dayHint': 'Không có ngày 29–31 để tháng nào cũng có ngày này.',
+  'recurring.startLabel': 'Ngày bắt đầu (chỉ để thử nghiệm)',
+  'recurring.startHint':
+    'Dạng YYYY-MM-DD. Ngày trong quá khứ sẽ mua theo giá đóng cửa cũ. Chỉ hiện trong bản phát triển.',
+  'recurring.invalidStart': 'Nhập ngày dạng 2026-01-15.',
+  'recurring.firstBuy': 'Lần mua tiếp theo: {date}, theo giá đóng cửa ngày đó.',
+  'recurring.howItWorks':
+    'Mỗi lần mua {amount} {symbol}, kể cả phần lẻ của cổ phiếu. Nếu rơi vào cuối tuần hoặc ngày lễ, lệnh sẽ mua vào phiên giao dịch kế tiếp. Nếu không đủ tiền mặt, lần mua đó sẽ bị bỏ qua.',
+  'recurring.next': 'Lần tới: {date}',
+  'recurring.active': 'Đang chạy',
+  'recurring.paused': 'Tạm dừng',
+  'recurring.pause': 'Tạm dừng',
+  'recurring.resume': 'Tiếp tục',
+  'recurring.pausedNote':
+    'Các lần mua bị lỡ trong lúc tạm dừng sẽ được bỏ qua, không mua bù.',
+  'recurring.edit': 'Sửa',
+  'recurring.deleteTitle': 'Xóa khoản đầu tư định kỳ này?',
+  'recurring.deleteMessage':
+    'Các cổ phiếu nó đã mua vẫn nằm trong danh mục của bạn.',
+  'recurring.purchases': 'Số lần mua',
+  'recurring.invested': 'Đã đầu tư',
+  'recurring.sharesBought': 'Cổ phiếu đã mua',
+  'recurring.avgPrice': 'Giá mua trung bình',
+  'recurring.worthToday': 'Giá trị hôm nay',
+  'recurring.statsNote':
+    'Tính cho các cổ phiếu mà khoản đầu tư này đã mua, theo giá hiện tại.',
+  'recurring.history': 'Lịch sử',
+  'recurring.noHistory': 'Chưa có lần mua nào. Lần đầu vào {date}.',
+  'recurring.bought': 'Đã mua {shares} cổ phiếu giá {price}',
+  'recurring.notFound': 'Không tìm thấy khoản đầu tư định kỳ này.',
+  'search.titleRecurring': 'Chọn cổ phiếu hoặc ETF',
+
+  'frequency.weekly': 'Hằng tuần',
+  'frequency.biweekly': '2 tuần một lần',
+  'frequency.monthly': 'Hằng tháng',
+  'schedule.weekly': '{weekday} hằng tuần',
+  'schedule.biweekly': '{weekday}, 2 tuần một lần',
+  'schedule.monthly': 'Ngày {day} hằng tháng',
+  'weekday.1': 'Thứ Hai',
+  'weekday.2': 'Thứ Ba',
+  'weekday.3': 'Thứ Tư',
+  'weekday.4': 'Thứ Năm',
+  'weekday.5': 'Thứ Sáu',
+  'weekdayShort.1': 'T2',
+  'weekdayShort.2': 'T3',
+  'weekdayShort.3': 'T4',
+  'weekdayShort.4': 'T5',
+  'weekdayShort.5': 'T6',
+
+  // Why an automated trade happened
+  'reason.recurringBuy': 'Mua định kỳ {amount}',
+  'reason.recurringSkippedCash':
+    'Bỏ qua: cần {amount} nhưng chỉ còn {cash} tiền mặt',
 };
 
 export default vi;

@@ -12,7 +12,7 @@ import React, {useEffect, useState} from 'react';
 import {container, vh, vw} from '../../services/styleSheet';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {LineChart} from 'react-native-gifted-charts';
-import {arrowUpIcon, arrowDownIcon} from '../../assets/svgXML';
+import {arrowUpIcon, arrowDownIcon, nextIcon} from '../../assets/svgXML';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useUserData} from '../../services/userData';
@@ -29,6 +29,7 @@ import {
   formatPercent,
   formatShares,
 } from '../../services/format';
+import {describeReason} from '../../services/reasons';
 import StockLogo from '../../components/StockLogo';
 
 type Tab = 'overview' | 'history';
@@ -53,6 +54,7 @@ const Trade = () => {
         <Header
           hasHoldings={Object.keys(data.portfolio.positions).length > 0}
         />
+        <AutomateCard />
         <TabSelector activeTab={activeTab} setActiveTab={setActiveTab} />
         {activeTab === 'overview' ? (
           <OverviewContent />
@@ -91,6 +93,23 @@ const Header: React.FC<{hasHoldings: boolean}> = ({hasHoldings}) => {
         </TouchableOpacity>
       </View>
     </View>
+  );
+};
+
+const AutomateCard: React.FC = () => {
+  const navigation = useNavigation<Nav>();
+  const {t} = useI18n();
+  return (
+    <TouchableOpacity
+      testID="trade-automate"
+      style={styles.automateCard}
+      onPress={() => navigation.navigate('Automate')}>
+      <View style={styles.automateText}>
+        <Text style={styles.automateTitle}>{t('home.automate')}</Text>
+        <Text style={styles.automateDesc}>{t('home.automateDesc')}</Text>
+      </View>
+      {nextIcon(vw(7), vw(7), '#FFED4B')}
+    </TouchableOpacity>
   );
 };
 
@@ -340,6 +359,11 @@ const TransactionCard: React.FC<{transaction: Transaction}> = ({
             </Text>
           </View>
         ) : null}
+        {transaction.reason ? (
+          <Text style={styles.reasonText}>
+            {describeReason(transaction.reason, t)}
+          </Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -559,6 +583,34 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 10,
     fontWeight: '500',
+  },
+  automateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: vw(3),
+    backgroundColor: '#2C2C2C',
+    borderRadius: 10,
+    padding: vw(4),
+    marginBottom: vh(2),
+  },
+  automateText: {
+    flexShrink: 1,
+    rowGap: 2,
+  },
+  automateTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  automateDesc: {
+    color: '#76787E',
+    fontSize: 13,
+  },
+  reasonText: {
+    color: '#B0B0B0',
+    fontSize: 12,
+    marginTop: vh(0.5),
   },
   transactionDetails: {
     borderTopWidth: 1,

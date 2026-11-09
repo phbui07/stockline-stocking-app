@@ -482,6 +482,86 @@ const en: Record<keyof typeof vi, string> = {
   'faq.q6': 'Where is my data stored?',
   'faq.a6':
     'Your account, portfolio and trade history are stored on this device only. Uninstalling the app deletes them.',
+  // Automate
+  'home.automate': 'Automate',
+  'home.automateDesc':
+    'Recurring investments and strategy tests, with virtual money',
+  'automate.title': 'Automate',
+  'automate.intro':
+    'Automations trade at each day’s closing price. They run while the app is open, and catch up on days you missed.',
+  'automate.checking': 'Checking prices…',
+  'automate.lastRun': 'Last checked {time}. Prices through {date}.',
+  'automate.neverRun': 'Prices are checked whenever you open the app.',
+  'automate.failed':
+    "Couldn't load prices for {symbols}. Trying again next time.",
+  'automate.runNow': 'Check now',
+
+  // Recurring investments
+  'recurring.title': 'Recurring investments',
+  'recurring.explain':
+    'Buy a fixed amount on a schedule, whatever the price. Low prices buy more shares and high prices buy fewer. This is called dollar-cost averaging.',
+  'recurring.add': 'New',
+  'recurring.empty': 'No recurring investments yet.',
+  'recurring.newTitle': 'New recurring investment',
+  'recurring.editTitle': 'Edit recurring investment',
+  'recurring.amount': 'Amount per purchase',
+  'recurring.amountRange': 'From {min} to {max}',
+  'recurring.frequency': 'How often',
+  'recurring.weekdayLabel': 'Day of the week',
+  'recurring.dayLabel': 'Day of the month',
+  'recurring.day': 'Day {day}',
+  'recurring.dayHint': 'Days 29–31 are left out so every month has the day.',
+  'recurring.startLabel': 'Start date (testing only)',
+  'recurring.startHint':
+    'YYYY-MM-DD. A past date buys at past closing prices. Only shown in development builds.',
+  'recurring.invalidStart': 'Enter a date like 2026-01-15.',
+  'recurring.firstBuy': 'Next purchase: {date}, at that day’s closing price.',
+  'recurring.howItWorks':
+    'Each purchase buys {amount} of {symbol}, including fractions of a share. If the day is a weekend or holiday, it buys on the next trading day. If there isn’t enough cash, that purchase is skipped.',
+  'recurring.next': 'Next: {date}',
+  'recurring.active': 'Active',
+  'recurring.paused': 'Paused',
+  'recurring.pause': 'Pause',
+  'recurring.resume': 'Resume',
+  'recurring.pausedNote':
+    'Purchases that fall while it’s paused are skipped, not made up later.',
+  'recurring.edit': 'Edit',
+  'recurring.deleteTitle': 'Delete this recurring investment?',
+  'recurring.deleteMessage': 'Shares it already bought stay in your portfolio.',
+  'recurring.purchases': 'Purchases',
+  'recurring.invested': 'Invested',
+  'recurring.sharesBought': 'Shares bought',
+  'recurring.avgPrice': 'Average price paid',
+  'recurring.worthToday': 'Worth today',
+  'recurring.statsNote':
+    'For the shares this recurring investment bought, at today’s price.',
+  'recurring.history': 'History',
+  'recurring.noHistory': 'No purchases yet. The first is on {date}.',
+  'recurring.bought': 'Bought {shares} shares at {price}',
+  'recurring.notFound': 'This recurring investment no longer exists.',
+  'search.titleRecurring': 'Choose a stock or ETF',
+
+  'frequency.weekly': 'Weekly',
+  'frequency.biweekly': 'Every 2 weeks',
+  'frequency.monthly': 'Monthly',
+  'schedule.weekly': 'Every {weekday}',
+  'schedule.biweekly': 'Every other {weekday}',
+  'schedule.monthly': 'Monthly on day {day}',
+  'weekday.1': 'Monday',
+  'weekday.2': 'Tuesday',
+  'weekday.3': 'Wednesday',
+  'weekday.4': 'Thursday',
+  'weekday.5': 'Friday',
+  'weekdayShort.1': 'Mon',
+  'weekdayShort.2': 'Tue',
+  'weekdayShort.3': 'Wed',
+  'weekdayShort.4': 'Thu',
+  'weekdayShort.5': 'Fri',
+
+  // Why an automated trade happened
+  'reason.recurringBuy': 'Recurring purchase of {amount}',
+  'reason.recurringSkippedCash':
+    'Skipped: needed {amount}, but only {cash} cash was available',
 };
 
 export default en;

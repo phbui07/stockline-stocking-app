@@ -115,9 +115,7 @@ export const isMarketDate = (text: string) => {
     return false;
   }
   const parsed = new Date(`${text}T00:00:00Z`);
-  return (
-    !Number.isNaN(parsed.getTime()) && isoDay(parsed) === text
-  );
+  return !Number.isNaN(parsed.getTime()) && isoDay(parsed) === text;
 };
 
 export const minDate = (a: MarketDate, b: MarketDate) => (a < b ? a : b);
