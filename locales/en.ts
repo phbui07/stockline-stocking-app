@@ -614,6 +614,90 @@ const en: Record<keyof typeof vi, string> = {
     'Sold: take-profit (+{percent}%) triggered. Closed at {close}, {move} from your average cost of {reference}.',
   'reason.trailingStop':
     'Sold: trailing stop (−{percent}%) triggered. Closed at {close}, {move} from the highest close of {reference}.',
+  // Strategy bots
+  'bot.title': 'Strategy bots',
+  'bot.hubExplain':
+    'A bot follows a trading rule on one stock. Set one up and see where its signals fell over the past year. Bots don’t trade yet: testing them on past prices comes next.',
+  'bot.empty': 'No bots yet.',
+  'bot.newTitle': 'New strategy bot',
+  'bot.editTitle': 'Edit strategy bot',
+  'bot.strategy': 'Moving-average crossover',
+  'bot.maExplain':
+    'Holds the stock while its trend points up. The "fast" line is the price or a short average; the "slow" line is a longer average. It buys when the fast line is above the slow one and sells when it drops below.',
+  'bot.modeCross': 'Two averages',
+  'bot.modePrice': 'Price vs average',
+  'bot.fastLength': 'Short average (days)',
+  'bot.slowLength': 'Long average (days)',
+  'bot.priceLength': 'Average (days)',
+  'bot.buffer': 'Buffer',
+  'bot.bufferHint':
+    'Only act once the fast line is this far past the slow one. Fewer false signals, but later ones.',
+  'bot.bufferPercent': 'Buffer %',
+  'bot.trendFilter': 'Trend filter',
+  'bot.trendHint':
+    'Only buy while the price is above a long-term average. It never forces a sale.',
+  'bot.trendLength': 'Long-term average (days)',
+  'bot.exits': 'Exits',
+  'bot.exitsExplain':
+    'Optional: these also sell, on top of the strategy’s own sell signal. Leave a box empty to turn it off.',
+  'bot.off': 'Off',
+  'bot.sizing': 'Position size',
+  'bot.riskPercent': 'Risk per trade (% of account)',
+  'bot.sizingExample':
+    'With a {account} account, each buy invests up to {invest}.',
+  'bot.sizingStop': 'If the {stop}% stop is hit, that loses about {loss}.',
+  'bot.sizingNoStop':
+    'With no stop-loss or trailing stop, the risk percent is the most it invests.',
+  'bot.errorFast':
+    'The short average needs 2 to 400 days and must be shorter than the long one.',
+  'bot.errorSlow': 'The average needs 2 to 400 days.',
+  'bot.errorBuffer': 'The buffer can be 0% to 20%.',
+  'bot.errorTrend': 'The long-term average needs 2 to 400 days.',
+  'bot.errorExit':
+    'Stop-loss and trailing stop take 0.5% to 90%; take-profit takes 0.5% to 1000%.',
+  'bot.errorRisk': 'Risk per trade can be 0.1% to 100%.',
+  'bot.preview': 'Signals over the past year',
+  'bot.signalCount': 'Buy signals: {buys}. Sell signals: {sells}.',
+  'bot.previewNote':
+    'This shows only where the rule would have bought and sold, at closing prices. Money, position sizes and exits come with the backtester.',
+  'bot.lastSignal': 'Most recent signal ({date}): {reason}',
+  'bot.notLive':
+    'Bots don’t trade yet. You’ll be able to test this one on past prices, then run it with virtual money.',
+  'bot.chartLabel':
+    'Price chart with moving averages and past buy and sell signals',
+  'bot.legendPrice': 'Price',
+  'bot.legendBuy': 'Buy signal',
+  'bot.legendSell': 'Sell signal',
+  'bot.statePrice':
+    'On {date}, the price ({close}) was {move} from its {slow}-day average.',
+  'bot.stateCross':
+    'On {date}, the {fast}-day average was {move} from the {slow}-day average.',
+  'bot.stateTrend': 'The price was {move} from its {trend}-day average.',
+  'bot.deleteTitle': 'Delete this bot?',
+  'bot.deleteMessage': 'Its settings will be removed.',
+  'strategy.priceVsMa': 'Price vs {slow}-day average',
+  'strategy.maCross': '{fast}/{slow}-day crossover',
+  'strategy.withBuffer': '{buffer}% buffer',
+  'strategy.withTrend': 'buys above the {trend}-day only',
+  'reason.maBuyPrice': 'Bought: price closed above its {slow}-day average',
+  'reason.maBuyPriceBuffer':
+    'Bought: price closed more than {buffer}% above its {slow}-day average',
+  'reason.maBuyCross':
+    'Bought: the {fast}-day average rose above the {slow}-day average',
+  'reason.maBuyCrossBuffer':
+    'Bought: the {fast}-day average rose more than {buffer}% above the {slow}-day average',
+  'reason.maSellPrice': 'Sold: price closed below its {slow}-day average',
+  'reason.maSellPriceBuffer':
+    'Sold: price closed more than {buffer}% below its {slow}-day average',
+  'reason.maSellCross':
+    'Sold: the {fast}-day average fell below the {slow}-day average',
+  'reason.maSellCrossBuffer':
+    'Sold: the {fast}-day average fell more than {buffer}% below the {slow}-day average',
+  'reason.maTrendBlocked':
+    'No buy: price is below its {trend}-day average (trend filter)',
+  'reason.maHold': 'No signal',
+  'reason.maWarmup': 'Waiting for {days} days of prices',
+  'reason.maLine': '{days}-day average',
 };
 
 export default en;

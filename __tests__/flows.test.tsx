@@ -20,6 +20,7 @@ import {MockPriceProvider} from '../services/data/mockProvider';
 import {
   addDays,
   dayOfWeek,
+  isWeekday,
   lastCompletedMarketDate,
 } from '../services/engine/dates';
 
@@ -603,6 +604,98 @@ describe('risk rules', () => {
     expect(await screen.findByTestId('risk-recent')).toHaveTextContent(
       /Đã bán AAPL: Cắt lỗ 10%/,
     );
+  }, 20000);
+});
+
+describe('strategy bots', () => {
+  const realProvider = getPriceProvider();
+  afterEach(() => setPriceProvider(realProvider));
+
+  // 300 trading days ending at the last finished day, with prices that rise
+  // and fall in waves, so the averages cross several times.
+  const wavyHistory = () => {
+    const dates: string[] = [];
+    for (let d = lastCompletedMarketDate(); dates.length < 300; ) {
+      if (isWeekday(d)) {
+        dates.unshift(d);
+      }
+      d = addDays(d, -1);
+    }
+    const closes = dates.map(
+      (_, i) => Math.round((100 + 20 * Math.sin(i / 15)) * 100) / 100,
+    );
+    return {dates, closes};
+  };
+
+  it('sets up a bot, previews its signals, then edits and deletes it', async () => {
+    setPriceProvider(new MockPriceProvider({AAPL: wavyHistory()}));
+    prices.AAPL = 100;
+    await startLoggedIn();
+    await fireEvent.press(screen.getByTestId('home-automate'));
+    expect(await screen.findByText('Chưa có bot nào.')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('bot-add'));
+    await fireEvent.press(await screen.findByTestId('search-result-AAPL'));
+
+    // The default 20/50-day crossover is drawn with its past signals.
+    expect(await screen.findByTestId('bot-preview')).toBeOnTheScreen();
+    expect(screen.getByTestId('bot-signal-count')).toHaveTextContent(
+      /Tín hiệu mua: \d+\. Tín hiệu bán: \d+\./,
+    );
+    expect(screen.getByTestId('bot-latest')).toHaveTextContent(
+      /trung bình 20 ngày chênh .+% so với trung bình 50 ngày/,
+    );
+
+    // A short average that isn't shorter blocks saving.
+    await fireEvent.changeText(screen.getByTestId('bot-fast'), '60');
+    expect(screen.getByTestId('bot-save')).toBeDisabled();
+    await fireEvent.changeText(screen.getByTestId('bot-fast'), '20');
+
+    // Risk-based sizing: 1% of $10,000 at risk with an 8% stop-loss →
+    // a $1,250 position that loses about $100 if stopped out.
+    await fireEvent.changeText(screen.getByTestId('bot-exit-stopLoss'), '8');
+    await fireEvent.changeText(screen.getByTestId('bot-risk'), '1');
+    expect(screen.getByTestId('bot-sizing-example')).toHaveTextContent(
+      /\$1,250\.00.*\$100\.00/,
+    );
+
+    await fireEvent(screen.getByTestId('bot-trend'), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('bot-save'));
+    expect(await screen.findByTestId('bot-AAPL')).toHaveTextContent(
+      /Giao cắt trung bình 20\/50 ngày · chỉ mua trên trung bình 200 ngày/,
+    );
+    let automation = JSON.parse(
+      (await AsyncStorage.getItem(`stockline.automation.${DEMO.email}`))!,
+    );
+    expect(automation.bots[0]).toMatchObject({
+      symbol: 'AAPL',
+      strategy: 'maCross',
+      settings: {
+        mode: 'cross',
+        fastLength: 20,
+        slowLength: 50,
+        trendFilter: true,
+      },
+      exits: {stopLoss: 8},
+      riskPercent: 1,
+    });
+
+    // Edit: compare the price with its 30-day average instead.
+    await fireEvent.press(screen.getByTestId('bot-AAPL'));
+    await fireEvent.press(await screen.findByTestId('bot-mode-price'));
+    await fireEvent.changeText(screen.getByTestId('bot-slow'), '30');
+    await fireEvent.press(screen.getByTestId('bot-save'));
+    expect(await screen.findByTestId('bot-AAPL')).toHaveTextContent(
+      /Giá so với trung bình 30 ngày/,
+    );
+
+    await fireEvent.press(screen.getByTestId('bot-AAPL'));
+    await fireEvent.press(await screen.findByTestId('bot-delete'));
+    await pressAlert('Xóa');
+    expect(await screen.findByText('Chưa có bot nào.')).toBeOnTheScreen();
+    automation = JSON.parse(
+      (await AsyncStorage.getItem(`stockline.automation.${DEMO.email}`))!,
+    );
+    expect(automation.bots).toEqual([]);
   }, 20000);
 });
 

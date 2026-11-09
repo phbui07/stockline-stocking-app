@@ -42,6 +42,7 @@ import Automate from './views/automation/Automate';
 import RecurringEdit from './views/automation/RecurringEdit';
 import RecurringDetail from './views/automation/RecurringDetail';
 import RiskRules from './views/automation/RiskRules';
+import BotEdit from './views/automation/BotEdit';
 import {LanguageProvider} from './services/i18n';
 import {SessionProvider, useSession} from './services/session';
 import {UserDataProvider} from './services/userData';
@@ -176,6 +177,7 @@ const RootNavigator = () => {
         <Stack.Screen name="RecurringEdit" component={RecurringEdit} />
         <Stack.Screen name="RecurringDetail" component={RecurringDetail} />
         <Stack.Screen name="RiskRules" component={RiskRules} />
+        <Stack.Screen name="BotEdit" component={BotEdit} />
         {/* Profile */}
         <Stack.Screen name="Account" component={Account} />
         <Stack.Screen name="Security" component={Security} />

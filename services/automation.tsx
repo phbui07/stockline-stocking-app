@@ -25,6 +25,7 @@ import {
   setRulePaused,
 } from './engine/recurring';
 import {createRiskRule, RiskKind, RiskRule} from './engine/risk';
+import {Bot, BotInput, createBot} from './engine/bots';
 import {
   AutomationEvent,
   priceRequests,
@@ -52,6 +53,7 @@ export interface AutomationData {
   version: number;
   recurring: RecurringRule[];
   risk: RiskRule[];
+  bots: Bot[];
   events: AutomationEvent[]; // newest first
   lastRun?: LastRun;
 }
@@ -60,6 +62,7 @@ export const createAutomationData = (): AutomationData => ({
   version: AUTOMATION_VERSION,
   recurring: [],
   risk: [],
+  bots: [],
   events: [],
 });
 
@@ -87,6 +90,10 @@ interface AutomationValue {
   // Turns a risk rule on for a position, or changes its percent.
   setRisk: (symbol: string, kind: RiskKind, percent: number) => void;
   removeRisk: (id: string) => void;
+  // Bots are only set up for now; nothing runs them until Phase 7.
+  addBot: (input: BotInput) => Bot;
+  editBot: (id: string, input: BotInput) => void;
+  removeBot: (id: string) => void;
   runNow: () => Promise<void>;
 }
 
@@ -330,6 +337,23 @@ export const AutomationProvider: React.FC<{children: React.ReactNode}> = ({
         update(current => ({
           ...current,
           risk: current.risk.filter(rule => rule.id !== id),
+        })),
+      addBot: input => {
+        const bot = createBot(input);
+        update(current => ({...current, bots: [...current.bots, bot]}));
+        return bot;
+      },
+      editBot: (id, input) =>
+        update(current => ({
+          ...current,
+          bots: current.bots.map(bot =>
+            bot.id === id ? {...bot, ...input} : bot,
+          ),
+        })),
+      removeBot: id =>
+        update(current => ({
+          ...current,
+          bots: current.bots.filter(bot => bot.id !== id),
         })),
       runNow,
     };

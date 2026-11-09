@@ -120,6 +120,9 @@ export const cleanDecimalInput = (text: string, decimals: number) => {
   return rest.length ? `${whole}.${rest.join('').slice(0, decimals)}` : whole;
 };
 
+// Keeps only digits, for whole numbers like a number of days.
+export const cleanIntegerInput = (text: string) => text.replace(/[^0-9]/g, '');
+
 export const formatTime = (ms: number, lang: Lang) =>
   new Date(ms).toLocaleTimeString(locale(lang), {
     hour: '2-digit',

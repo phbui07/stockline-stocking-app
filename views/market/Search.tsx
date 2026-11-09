@@ -20,7 +20,13 @@ import {PopularStocks} from '../../services/renderData';
 import ScreenHeader from '../../components/ScreenHeader';
 import StockRow from '../../components/StockRow';
 
-export type SearchMode = 'view' | 'buy' | 'sell' | 'alert' | 'recurring';
+export type SearchMode =
+  | 'view'
+  | 'buy'
+  | 'sell'
+  | 'alert'
+  | 'recurring'
+  | 'bot';
 
 const TITLES: Record<SearchMode, TKey> = {
   view: 'search.titleView',
@@ -28,10 +34,11 @@ const TITLES: Record<SearchMode, TKey> = {
   sell: 'search.titleSell',
   alert: 'search.titleAlert',
   recurring: 'search.titleRecurring',
+  bot: 'search.titleRecurring', // same wording: "Choose a stock or ETF"
 };
 
 // Modes that end in a purchase only list stocks and ETFs.
-const BUYING_MODES: SearchMode[] = ['buy', 'recurring'];
+const BUYING_MODES: SearchMode[] = ['buy', 'recurring', 'bot'];
 
 const Search = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -91,6 +98,8 @@ const Search = () => {
       navigation.popTo('Alerts', {symbol});
     } else if (mode === 'recurring') {
       navigation.replace('RecurringEdit', {symbol});
+    } else if (mode === 'bot') {
+      navigation.replace('BotEdit', {symbol});
     } else {
       navigation.navigate('ChartInfor', {symbol});
     }

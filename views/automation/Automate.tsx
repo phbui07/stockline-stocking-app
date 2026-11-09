@@ -17,9 +17,14 @@ import {
   formatMarketDate,
   formatMoney,
 } from '../../services/format';
-import {describeSchedule, RISK_LABELS} from '../../services/reasons';
+import {
+  describeSchedule,
+  describeStrategy,
+  RISK_LABELS,
+} from '../../services/reasons';
 import type {RecurringRule} from '../../services/engine/recurring';
 import type {RiskRule} from '../../services/engine/risk';
+import type {Bot} from '../../services/engine/bots';
 import ScreenHeader from '../../components/ScreenHeader';
 import SimulatedBanner from '../../components/SimulatedBanner';
 import StockLogo from '../../components/StockLogo';
@@ -99,6 +104,30 @@ const Automate = () => {
           </Text>
         ))}
 
+        <View style={[styles.sectionHeader, styles.sectionGap]}>
+          <Text style={styles.sectionTitle}>{t('bot.title')}</Text>
+          <TouchableOpacity
+            testID="bot-add"
+            style={styles.addBtn}
+            onPress={() => navigation.navigate('Search', {mode: 'bot'})}>
+            <Text style={styles.addText}>+ {t('recurring.add')}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.explain}>{t('bot.hubExplain')}</Text>
+        {data.bots.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.grey}>{t('bot.empty')}</Text>
+          </View>
+        ) : (
+          data.bots.map(bot => (
+            <BotCard
+              key={bot.id}
+              bot={bot}
+              onPress={() => navigation.navigate('BotEdit', {id: bot.id})}
+            />
+          ))
+        )}
+
         <View style={styles.statusCard}>
           <Text testID="automate-status" style={styles.grey}>
             {running
@@ -153,6 +182,28 @@ const RecurringCard: React.FC<{rule: RecurringRule; onPress: () => void}> = ({
               date: formatMarketDate(rule.nextDate, lang, {year: false}),
             })}
       </Text>
+    </TouchableOpacity>
+  );
+};
+
+const BotCard: React.FC<{bot: Bot; onPress: () => void}> = ({bot, onPress}) => {
+  const {t} = useI18n();
+  const exits = (['stopLoss', 'takeProfit', 'trailingStop'] as const)
+    .filter(kind => bot.exits[kind] !== undefined)
+    .map(kind => `${t(RISK_LABELS[kind])} ${bot.exits[kind]}%`);
+  return (
+    <TouchableOpacity
+      testID={`bot-${bot.symbol}`}
+      style={styles.card}
+      onPress={onPress}>
+      <StockLogo symbol={bot.symbol} size={vw(10)} />
+      <View style={styles.cardText}>
+        <Text style={styles.cardTitle}>{bot.symbol}</Text>
+        <Text style={styles.grey}>{describeStrategy(bot.settings, t)}</Text>
+        {exits.length ? (
+          <Text style={styles.grey}>{exits.join(' · ')}</Text>
+        ) : null}
+      </View>
     </TouchableOpacity>
   );
 };

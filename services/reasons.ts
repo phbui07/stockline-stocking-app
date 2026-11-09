@@ -2,6 +2,7 @@ import type {TKey} from './i18n';
 import type {TradeReason} from './portfolio';
 import type {Frequency, Schedule} from './engine/recurring';
 import type {RiskKind} from './engine/risk';
+import type {MaCrossSettings} from './engine/strategies/maCrossover';
 import {formatMoney, formatPercent} from './format';
 
 // Turns automation data into sentences in the current language. Reasons are
@@ -82,7 +83,45 @@ export const describeReason = (reason: TradeReason, t: Translate) => {
         move: formatPercent((close / reference - 1) * 100),
       });
     }
+    case 'maBuy':
+    case 'maSell': {
+      // Four sentences per side: price or two averages, with or without a
+      // buffer. Separate sentences read better than gluing pieces together,
+      // especially in Vietnamese, where the word order differs.
+      const side = reason.code === 'maBuy' ? 'Buy' : 'Sell';
+      const mode = params.mode === 'price' ? 'Price' : 'Cross';
+      const buffered = Number(params.buffer) > 0 ? 'Buffer' : '';
+      return t(`reason.ma${side}${mode}${buffered}` as TKey, params);
+    }
+    case 'maTrendBlocked':
+      return t('reason.maTrendBlocked', params);
+    case 'maHold':
+      return t('reason.maHold');
+    case 'maWarmup':
+      return t('reason.maWarmup', params);
+    case 'maLine':
+      return t('reason.maLine', params);
     default:
       return reason.code; // a code from a newer version of the app
   }
+};
+
+// A short name for a strategy's settings, e.g. "20/50-day crossover ·
+// 2% buffer".
+export const describeStrategy = (settings: MaCrossSettings, t: Translate) => {
+  const parts = [
+    settings.mode === 'price'
+      ? t('strategy.priceVsMa', {slow: settings.slowLength})
+      : t('strategy.maCross', {
+          fast: settings.fastLength,
+          slow: settings.slowLength,
+        }),
+  ];
+  if (settings.bufferPercent > 0) {
+    parts.push(t('strategy.withBuffer', {buffer: settings.bufferPercent}));
+  }
+  if (settings.trendFilter) {
+    parts.push(t('strategy.withTrend', {trend: settings.trendLength}));
+  }
+  return parts.join(' · ');
 };

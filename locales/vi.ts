@@ -611,6 +611,90 @@ const vi = {
     'Đã bán: chạm chốt lời (+{percent}%). Đóng cửa ở {close}, {move} so với giá vốn trung bình {reference}.',
   'reason.trailingStop':
     'Đã bán: chạm dừng lỗ động (−{percent}%). Đóng cửa ở {close}, {move} so với giá đóng cửa cao nhất {reference}.',
+  // Strategy bots
+  'bot.title': 'Bot chiến lược',
+  'bot.hubExplain':
+    'Bot làm theo một quy tắc giao dịch trên một cổ phiếu. Hãy thiết lập và xem các tín hiệu của nó trong năm qua. Bot chưa giao dịch: bước tiếp theo là thử nó trên giá quá khứ.',
+  'bot.empty': 'Chưa có bot nào.',
+  'bot.newTitle': 'Bot chiến lược mới',
+  'bot.editTitle': 'Sửa bot chiến lược',
+  'bot.strategy': 'Giao cắt đường trung bình động',
+  'bot.maExplain':
+    'Giữ cổ phiếu khi xu hướng đi lên. Đường "nhanh" là giá hoặc một đường trung bình ngắn; đường "chậm" là đường trung bình dài hơn. Bot mua khi đường nhanh nằm trên đường chậm và bán khi nó rơi xuống dưới.',
+  'bot.modeCross': 'Hai đường trung bình',
+  'bot.modePrice': 'Giá so với trung bình',
+  'bot.fastLength': 'Trung bình ngắn (ngày)',
+  'bot.slowLength': 'Trung bình dài (ngày)',
+  'bot.priceLength': 'Trung bình (ngày)',
+  'bot.buffer': 'Vùng đệm',
+  'bot.bufferHint':
+    'Chỉ hành động khi đường nhanh vượt đường chậm một khoảng như vậy. Ít tín hiệu sai hơn nhưng chậm hơn.',
+  'bot.bufferPercent': 'Vùng đệm %',
+  'bot.trendFilter': 'Bộ lọc xu hướng',
+  'bot.trendHint':
+    'Chỉ mua khi giá nằm trên một đường trung bình dài hạn. Không bao giờ buộc phải bán.',
+  'bot.trendLength': 'Trung bình dài hạn (ngày)',
+  'bot.exits': 'Điểm thoát',
+  'bot.exitsExplain':
+    'Không bắt buộc: các quy tắc này cũng bán, ngoài tín hiệu bán của chiến lược. Để trống là tắt.',
+  'bot.off': 'Tắt',
+  'bot.sizing': 'Quy mô vị thế',
+  'bot.riskPercent': 'Rủi ro mỗi lệnh (% tài khoản)',
+  'bot.sizingExample':
+    'Với tài khoản {account}, mỗi lần mua đầu tư tối đa {invest}.',
+  'bot.sizingStop': 'Nếu chạm mức dừng {stop}%, khoản lỗ khoảng {loss}.',
+  'bot.sizingNoStop':
+    'Nếu không có cắt lỗ hay dừng lỗ động, tỷ lệ rủi ro là mức tối đa được đầu tư.',
+  'bot.errorFast':
+    'Trung bình ngắn cần từ 2 đến 400 ngày và phải ngắn hơn trung bình dài.',
+  'bot.errorSlow': 'Đường trung bình cần từ 2 đến 400 ngày.',
+  'bot.errorBuffer': 'Vùng đệm từ 0% đến 20%.',
+  'bot.errorTrend': 'Trung bình dài hạn cần từ 2 đến 400 ngày.',
+  'bot.errorExit':
+    'Cắt lỗ và dừng lỗ động từ 0,5% đến 90%; chốt lời từ 0,5% đến 1000%.',
+  'bot.errorRisk': 'Rủi ro mỗi lệnh từ 0,1% đến 100%.',
+  'bot.preview': 'Tín hiệu trong năm qua',
+  'bot.signalCount': 'Tín hiệu mua: {buys}. Tín hiệu bán: {sells}.',
+  'bot.previewNote':
+    'Biểu đồ chỉ cho thấy nơi quy tắc sẽ mua và bán, theo giá đóng cửa. Tiền, quy mô vị thế và điểm thoát sẽ có trong phần kiểm thử quá khứ.',
+  'bot.lastSignal': 'Tín hiệu gần nhất ({date}): {reason}',
+  'bot.notLive':
+    'Bot chưa giao dịch. Bạn sẽ có thể thử nó trên giá quá khứ, rồi chạy bằng tiền ảo.',
+  'bot.chartLabel':
+    'Biểu đồ giá với các đường trung bình động và tín hiệu mua bán trong quá khứ',
+  'bot.legendPrice': 'Giá',
+  'bot.legendBuy': 'Tín hiệu mua',
+  'bot.legendSell': 'Tín hiệu bán',
+  'bot.statePrice':
+    'Ngày {date}, giá ({close}) chênh {move} so với trung bình {slow} ngày.',
+  'bot.stateCross':
+    'Ngày {date}, trung bình {fast} ngày chênh {move} so với trung bình {slow} ngày.',
+  'bot.stateTrend': 'Giá chênh {move} so với trung bình {trend} ngày.',
+  'bot.deleteTitle': 'Xóa bot này?',
+  'bot.deleteMessage': 'Thiết lập của nó sẽ bị xóa.',
+  'strategy.priceVsMa': 'Giá so với trung bình {slow} ngày',
+  'strategy.maCross': 'Giao cắt trung bình {fast}/{slow} ngày',
+  'strategy.withBuffer': 'vùng đệm {buffer}%',
+  'strategy.withTrend': 'chỉ mua trên trung bình {trend} ngày',
+  'reason.maBuyPrice': 'Đã mua: giá đóng cửa trên trung bình {slow} ngày',
+  'reason.maBuyPriceBuffer':
+    'Đã mua: giá đóng cửa cao hơn trung bình {slow} ngày hơn {buffer}%',
+  'reason.maBuyCross':
+    'Đã mua: trung bình {fast} ngày vượt lên trên trung bình {slow} ngày',
+  'reason.maBuyCrossBuffer':
+    'Đã mua: trung bình {fast} ngày vượt lên trên trung bình {slow} ngày hơn {buffer}%',
+  'reason.maSellPrice': 'Đã bán: giá đóng cửa dưới trung bình {slow} ngày',
+  'reason.maSellPriceBuffer':
+    'Đã bán: giá đóng cửa thấp hơn trung bình {slow} ngày hơn {buffer}%',
+  'reason.maSellCross':
+    'Đã bán: trung bình {fast} ngày cắt xuống dưới trung bình {slow} ngày',
+  'reason.maSellCrossBuffer':
+    'Đã bán: trung bình {fast} ngày cắt xuống dưới trung bình {slow} ngày hơn {buffer}%',
+  'reason.maTrendBlocked':
+    'Không mua: giá đang dưới trung bình {trend} ngày (bộ lọc xu hướng)',
+  'reason.maHold': 'Không có tín hiệu',
+  'reason.maWarmup': 'Đang chờ đủ {days} ngày giá',
+  'reason.maLine': 'Trung bình {days} ngày',
 };
 
 export default vi;

@@ -7,7 +7,9 @@ Research notes from October 2026 on the legal limits that apply to Stockline's A
 - **No recommendations.** The AI is told never to say buy, sell, hold, accumulate or avoid, and never to give ratings, price targets, forecasts, allocations or "should". `findAdvice()` in `services/aiExplainer.ts` checks every answer in both languages; the app retries once, then removes any sentences that still match.
 - **AI labels.** Every explanation is labeled "AI-generated, for education only; not investment advice", with the model name and time. An AI notice appears at the start of each session.
 - **No personal data to the AI.** Only public market data is sent to Google. Portfolio facts ("this stock is 12% of your portfolio") are calculated on the phone and never sent.
-- **Neutral indicator statistics.** Each indicator shows its sample size, date range and the base rate for all days, with a hypothetical-results caveat and a warning when there are fewer than 50 cases. Nothing is called a "signal", and nothing sends alerts based on indicators.
+- **Neutral indicator statistics.** Each indicator shows its sample size, date range and the base rate for all days, with a hypothetical-results caveat and a warning when there are fewer than 50 cases. The indicator statistics never call anything a "signal", and nothing sends alerts based on indicators.
+- **Automations are rules you set yourself.** Recurring investments, risk rules and strategy bots only do what you configure, with virtual money. The app suggests no stocks and no settings: the inputs are empty, or use textbook defaults such as 20/50-day averages.
+- **Strategy bot signals are historical.** The bot setup screen marks where *your* rule would have bought and sold over the past year. For the latest close it states facts ("the 20-day average was 3.8% below the 50-day") and never says "buy now". There are no alerts or notifications for signals. Every automation screen shows "Simulated with virtual money. For education only, not investment advice."
 - **Virtual money only.** There are no real orders and no brokerage connection.
 
 ## Key rules
@@ -58,3 +60,7 @@ Research notes from October 2026 on the legal limits that apply to Stockline's A
 7. **AI Law.** Self-classify the AI feature's risk under Vietnam's AI Law and Decree 142/2026.
 8. **Claims.** Don't monetise the analysis and don't make accuracy claims until you've had legal review.
 9. **Legal review.** Get a Vietnamese securities lawyer's opinion, and consider asking the SSC in writing.
+10. **Strategy signals and backtests.**
+    - Ask the lawyer specifically whether showing buy/sell signals from a rule the user builds counts as a "recommendation". The ITP case above involved published technical analysis with buy/sell calls.
+    - Keep signals historical, user-configured and alert-free unless the lawyer says otherwise.
+    - Label backtest results as hypothetical (see the SEC Marketing Rule note).

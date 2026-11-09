@@ -11,7 +11,7 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
 | 0 | Foundations: price-data interface, market dates, fractional shares, lots, trade sources and reasons | Done |
 | 1 | Recurring investments (dollar-cost averaging) | Done |
 | 2 | Automatic risk rules: stop-loss, take-profit, trailing stop | Done |
-| 3 | Strategy engine and moving-average crossover bot | |
+| 3 | Strategy engine and moving-average crossover bot | Done |
 | 4 | Backtester | |
 | 5 | Realistic costs: slippage and short-term tax | |
 | 6 | Trade log with explanations | |
@@ -24,6 +24,12 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
   - `dates.ts`: market dates.
   - `recurring.ts`: recurring-investment schedules.
   - `risk.ts`: stop-loss, take-profit and trailing-stop lines.
+  - `strategy.ts`: the `Strategy` interface every strategy follows.
+  - `strategies/`: the strategies, plus a registry (`strategies/index.ts`). To add RSI, write `strategies/rsi.ts` and register it there.
+  - `indicators.ts`: moving averages.
+  - `signals.ts`: replays a strategy day by day to find its past buy and sell signals.
+  - `sizing.ts`: position sizing.
+  - `bots.ts`: a bot's saved settings.
   - `runner.ts`: replays missed days in order. Each day it checks risk rules first, then makes recurring purchases. Later phases add their steps to the same loop.
 - `services/automation.tsx`: saves each user's automations (`stockline.automation.<email>`), downloads prices and calls the runner. It runs when the app opens, when it returns from the background, every 15 minutes while it's open, after a rule changes, and on "Check now".
 - `services/reasons.ts`: turns stored reasons and schedules into sentences in the current language.
@@ -95,6 +101,23 @@ These keep the simulation simple. Each one is a known gap from real trading.
   - Selling the whole position by hand also ends its rules.
 - **Same-day order:** risk rules run before recurring purchases, so a stop-loss acts on what you held coming into the day.
 - **No double sales:** each sale's id is `risk:<rule>`, so one rule can't sell twice.
+
+## Strategy engine and bots (Phase 3)
+
+- **A strategy** gets the price history up to and including the current day, plus whether it holds the stock, and returns BUY, SELL or HOLD with a reason. Callers pass `history.slice(0, i + 1)`, so later prices can't reach it. A test checks the strategy only ever sees `i + 1` bars, and another checks that changing later prices doesn't change earlier signals.
+- **Moving-average crossover:**
+  - **Fast and slow lines:** the fast line is the close ("price" mode) or a short average ("cross" mode). The slow line is a longer average.
+  - **State rule:** it's in the market while fast > slow. So starting mid-trend buys on the first day, rather than waiting for the next cross.
+  - **Buffer of X%:** buy only above slow × (100 + X) / 100, and sell only below slow × (100 − X) / 100. In between, it keeps its position.
+  - **Trend filter:** blocks buys while the close is at or below the long average. It never forces a sale.
+- **Prices:** strategies use split-adjusted closes, the prices the charts show, not dividend-adjusted ones. Phase 4 decides how dividends count in backtest returns.
+- **Position sizing (risk-based):**
+  - Formula: budget = equity × risk% ÷ stop%, capped at the cash available.
+  - The stop is the closer of the bot's stop-loss and trailing stop. A trailing stop starts at the entry price, so at first it sits the same distance below.
+  - With no stop, the budget is equity × risk%.
+- **Bots** are saved settings only: stock, strategy, exits and sizing. Nothing trades them until forward testing (Phase 7).
+- **Wording:** the setup screen describes the latest close factually. It never says "buy now" (see [PUBLISHING.md](PUBLISHING.md)).
+- **Charts:** `components/MultiLineChart.tsx` is a small react-native-svg chart with several lines and ▲/▼ markers. Phase 4's equity curves will reuse it.
 
 ## Saved-data versions
 
