@@ -22,7 +22,12 @@ import {useQuotes} from '../../services/quoteStore';
 import {useUserData} from '../../services/userData';
 import {Holding, summarize} from '../../services/portfolio';
 import {TKey, useI18n} from '../../services/i18n';
-import {changeColor, formatMoney, formatPercent} from '../../services/format';
+import {
+  changeColor,
+  formatMoney,
+  formatPercent,
+  formatShares,
+} from '../../services/format';
 import StockLogo from '../../components/StockLogo';
 
 type Filter = 'all' | 'gainers' | 'losers';
@@ -203,7 +208,7 @@ const StockCard: React.FC<{holding: Holding; onPress: () => void}> = ({
             {position.name}
           </Text>
           <Text style={styles.stockQuantity}>
-            {t('common.shares', {count: position.shares})} ·{' '}
+            {t('common.shares', {count: formatShares(position.shares)})} ·{' '}
             {t('holdings.avgCost', {price: formatMoney(position.avgCost)})}
           </Text>
         </View>

@@ -13,6 +13,7 @@ import {
   createPortfolio,
   DEFAULT_STARTING_CASH,
   executeOrder,
+  migratePortfolio,
   OrderInput,
   Portfolio,
   Transaction,
@@ -45,6 +46,19 @@ export const createUserData = (now = Date.now()): UserData => ({
   alerts: [],
   settings: {biometricForTrades: false, startingCash: DEFAULT_STARTING_CASH},
 });
+
+// Fills in fields added since the data was saved, and upgrades an old
+// portfolio format to the current one.
+export const migrateUserData = (saved: Partial<UserData>): UserData => {
+  const defaults = createUserData();
+  return {
+    ...defaults,
+    ...saved,
+    portfolio: saved.portfolio
+      ? migratePortfolio(saved.portfolio)
+      : defaults.portfolio,
+  };
+};
 
 const userKey = (email: string) => `stockline.user.${email}`;
 
@@ -89,7 +103,7 @@ export const UserDataProvider: React.FC<{children: React.ReactNode}> = ({
       if (cancelled) {
         return;
       }
-      const next = saved ? {...createUserData(), ...saved} : createUserData();
+      const next = saved ? migrateUserData(saved) : createUserData();
       dataRef.current = next;
       setData(next);
       setLoadedFor(email);

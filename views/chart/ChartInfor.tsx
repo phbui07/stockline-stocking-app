@@ -39,6 +39,7 @@ import {
   formatNumber,
   formatPercent,
   formatPoints,
+  formatShares,
   formatTime,
 } from '../../services/format';
 import {COMPANY_ABOUT, CompanyAbout} from '../../locales/companies';
@@ -305,7 +306,7 @@ const PositionCard: React.FC<{holding: ReturnType<typeof toHolding>}> = ({
 }) => {
   const {t} = useI18n();
   const rows: [string, string, string?][] = [
-    [t('detail.positionShares'), String(holding.position.shares)],
+    [t('detail.positionShares'), formatShares(holding.position.shares)],
     [t('detail.positionAvg'), formatMoney(holding.position.avgCost)],
     [t('detail.positionValue'), formatMoney(holding.value)],
     [

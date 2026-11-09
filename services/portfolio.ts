@@ -1,4 +1,5 @@
 import type {ChartPoint, Quote} from './marketData';
+import {MarketDate, toMarketDate} from './engine/dates';
 
 // Paper trading: orders fill instantly at the given price against a virtual
 // cash balance. Everything here is pure so it can be unit tested.
@@ -6,14 +7,53 @@ import type {ChartPoint, Quote} from './marketData';
 export const DEFAULT_STARTING_CASH = 100000;
 export const STARTING_CASH_OPTIONS = [10000, 50000, 100000, 1000000];
 
+// Fractional shares are kept to 6 decimal places (0.000001 of a share), like
+// most brokers that offer them. Money is kept to the cent.
+export const SHARE_DECIMALS = 6;
+const SHARE_UNIT = 10 ** SHARE_DECIMALS;
+
+// Bumped whenever the saved shape changes; see migratePortfolio.
+export const PORTFOLIO_VERSION = 2;
+
+// One purchase. Positions keep their lots separately, instead of merging
+// them into a single average, because some rules need to know about each
+// purchase: when it happened (short-term tax applies to holdings of a year
+// or less) and what it cost.
+//
+// Stock splits: prices are always quoted in the shares that exist on the day
+// you look. If a stock splits 10-for-1 after you bought 1 share at $1,000,
+// you now have 10 shares that cost $100 each. `unitsAsOf` is the day whose
+// shares the lot is counted in, so applySplit knows which lots still need
+// converting.
+export interface Lot {
+  shares: number;
+  price: number; // cost per share, including any buying fees
+  date: number; // when it was bought
+  unitsAsOf: MarketDate;
+}
+
 export interface Position {
   symbol: string;
   name: string;
+  lots: Lot[]; // oldest first; selling uses the oldest lots first (FIFO)
+  // Totals across the lots, kept in sync by buildPosition so screens can
+  // read them directly.
   shares: number;
   avgCost: number;
 }
 
 export type TradeSide = 'BUY' | 'SELL';
+
+// Who placed a trade: you, or one of the automations.
+export type TradeSource = 'manual' | 'recurring' | 'risk' | 'bot' | 'rebalance';
+
+// Why an automated trade happened, stored as a code plus the numbers it
+// mentions, e.g. {code: 'trailingStop', params: {percent: 8}}. Screens turn
+// it into a sentence in the current language, so it isn't saved in one.
+export interface TradeReason {
+  code: string;
+  params?: Record<string, string | number>;
+}
 
 export interface Transaction {
   id: string;
@@ -22,16 +62,31 @@ export interface Transaction {
   name: string;
   shares: number;
   price: number;
-  total: number;
-  realizedPnL?: number; // sells only
+  total: number; // shares × price, before fees and tax
+  realizedPnL?: number; // sells only, after this sale's fees and tax
   date: number;
+  source: TradeSource;
+  reason?: TradeReason;
+  automationId?: string; // the rule or bot that placed it
+  fees?: number;
+  tax?: number;
+  unitsAsOf?: MarketDate; // see Lot; missing on trades saved before splits were tracked
+}
+
+// A split that has been applied to this portfolio's lots.
+export interface AppliedSplit {
+  symbol: string;
+  date: MarketDate;
+  ratio: number;
 }
 
 export interface Portfolio {
+  version: number;
   startingCash: number;
   cash: number;
   positions: Record<string, Position>;
   transactions: Transaction[]; // newest first
+  splits: AppliedSplit[];
   createdAt: number;
 }
 
@@ -57,71 +112,141 @@ export interface OrderInput {
   price: number;
   date?: number;
   id?: string;
+  source?: TradeSource; // defaults to 'manual'
+  reason?: TradeReason;
+  automationId?: string;
+  fees?: number;
+  tax?: number;
+  // Which day's shares the price is quoted in. Live prices are in today's
+  // shares, which is the default. An automation that fills a past day at
+  // that day's close passes the day the prices were downloaded, because
+  // downloaded history is already converted to today's shares.
+  unitsAsOf?: MarketDate;
 }
 
 const cents = (value: number) => Math.round(value * 100) / 100;
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 
+export const roundShares = (value: number) =>
+  Math.round(value * SHARE_UNIT) / SHARE_UNIT;
+
+// Cleans what the user types as a share quantity: digits and one decimal
+// point, with at most SHARE_DECIMALS decimals. Vietnamese keyboards type a
+// comma as the decimal separator, so a comma counts as the point.
+export const cleanSharesInput = (text: string) => {
+  const [whole, ...rest] = text
+    .replace(/,/g, '.')
+    .replace(/[^0-9.]/g, '')
+    .split('.');
+  return rest.length
+    ? `${whole}.${rest.join('').slice(0, SHARE_DECIMALS)}`
+    : whole;
+};
+
+// The text to show in a quantity box for a number of shares.
+export const sharesToInput = (shares: number) =>
+  String(roundShares(Math.max(0, shares)));
+
 export const createPortfolio = (
   startingCash = DEFAULT_STARTING_CASH,
   now = Date.now(),
 ): Portfolio => ({
+  version: PORTFOLIO_VERSION,
   startingCash,
   cash: startingCash,
   positions: {},
   transactions: [],
+  splits: [],
   createdAt: now,
 });
 
+// Recomputes a position's totals from its lots.
+export const buildPosition = (
+  symbol: string,
+  name: string,
+  lots: Lot[],
+): Position => {
+  const shares = roundShares(sum(lots.map(lot => lot.shares)));
+  return {
+    symbol,
+    name,
+    lots,
+    shares,
+    avgCost: shares ? sum(lots.map(lot => lot.shares * lot.price)) / shares : 0,
+  };
+};
+
+// The most shares the cash can buy, rounded down to a whole SHARE_DECIMALS
+// unit. The tiny epsilon stops float noise from rounding a whole number down:
+// 0.3 / 0.1 is 2.9999999999999996 in floating point, but it should buy 3.
 export const maxAffordableShares = (cash: number, price: number) =>
-  price > 0 ? Math.floor(cash / price + 1e-9) : 0;
+  price > 0 ? Math.floor((cash / price) * SHARE_UNIT + 1e-6) / SHARE_UNIT : 0;
+
+// Takes `shares` from the oldest lots first. Returns what's left and how much
+// those shares had cost.
+const takeFifo = (lots: Lot[], shares: number) => {
+  const remaining: Lot[] = [];
+  let toTake = shares;
+  let cost = 0;
+  for (const lot of lots) {
+    const taken = Math.min(lot.shares, toTake);
+    toTake = roundShares(toTake - taken);
+    cost += taken * lot.price;
+    const left = roundShares(lot.shares - taken);
+    if (left > 0) {
+      remaining.push({...lot, shares: left});
+    }
+  }
+  return {remaining, cost};
+};
 
 export const executeOrder = (
   portfolio: Portfolio,
   order: OrderInput,
 ): {portfolio: Portfolio; transaction: Transaction} => {
-  const {side, symbol, name, shares, price} = order;
-  if (!Number.isInteger(shares) || shares <= 0) {
+  const {side, symbol, name, price} = order;
+  const fees = cents(order.fees ?? 0);
+  const tax = cents(order.tax ?? 0);
+  let shares = roundShares(order.shares);
+  if (!Number.isFinite(shares) || shares <= 0) {
     throw new OrderError('INVALID_QUANTITY');
   }
   if (!(price > 0)) {
     throw new OrderError('INVALID_PRICE');
   }
 
-  const total = cents(shares * price);
+  const date = order.date ?? Date.now();
+  const unitsAsOf = order.unitsAsOf ?? toMarketDate(date);
   const positions = {...portfolio.positions};
   const existing = positions[symbol];
   let cash = portfolio.cash;
   let realizedPnL: number | undefined;
 
   if (side === 'BUY') {
-    if (total > cash) {
+    const total = cents(shares * price);
+    if (cents(total + fees) > cash) {
       throw new OrderError('INSUFFICIENT_CASH');
     }
-    const held = existing?.shares ?? 0;
-    const newShares = held + shares;
-    positions[symbol] = {
-      symbol,
-      name,
-      shares: newShares,
-      avgCost: ((existing?.avgCost ?? 0) * held + price * shares) / newShares,
-    };
-    cash = cents(cash - total);
+    const lot: Lot = {shares, price: price + fees / shares, date, unitsAsOf};
+    positions[symbol] = buildPosition(symbol, name, [
+      ...(existing?.lots ?? []),
+      lot,
+    ]);
+    cash = cents(cash - total - fees);
   } else {
-    if (!existing || existing.shares < shares) {
+    if (!existing || shares > existing.shares) {
       throw new OrderError('INSUFFICIENT_SHARES');
     }
-    realizedPnL = cents((price - existing.avgCost) * shares);
-    const remaining = existing.shares - shares;
-    if (remaining === 0) {
-      delete positions[symbol];
+    const {remaining, cost} = takeFifo(existing.lots, shares);
+    realizedPnL = cents(shares * price - cost - fees - tax);
+    if (remaining.length) {
+      positions[symbol] = buildPosition(symbol, existing.name, remaining);
     } else {
-      positions[symbol] = {...existing, shares: remaining};
+      delete positions[symbol];
     }
-    cash = cents(cash + total);
+    cash = cents(cash + cents(shares * price) - fees - tax);
   }
 
-  const date = order.date ?? Date.now();
   const transaction: Transaction = {
     id: order.id ?? `${date}-${Math.random().toString(36).slice(2, 8)}`,
     side,
@@ -129,10 +254,25 @@ export const executeOrder = (
     name,
     shares,
     price,
-    total,
+    total: cents(shares * price),
     realizedPnL,
     date,
+    source: order.source ?? 'manual',
+    unitsAsOf,
   };
+  // Leave optional fields out unless they're used, to keep saved data small.
+  if (order.reason) {
+    transaction.reason = order.reason;
+  }
+  if (order.automationId) {
+    transaction.automationId = order.automationId;
+  }
+  if (fees) {
+    transaction.fees = fees;
+  }
+  if (tax) {
+    transaction.tax = tax;
+  }
   return {
     portfolio: {
       ...portfolio,
@@ -141,6 +281,82 @@ export const executeOrder = (
       transactions: [transaction, ...portfolio.transactions],
     },
     transaction,
+  };
+};
+
+// Converts lots bought before a split into post-split shares: a 10-for-1
+// split turns 1 share at $1,000 into 10 shares at $100. The cost and value
+// don't change. Applying the same split twice does nothing.
+export const applySplit = (
+  portfolio: Portfolio,
+  split: AppliedSplit,
+): Portfolio => {
+  const alreadyApplied = portfolio.splits.some(
+    s => s.symbol === split.symbol && s.date === split.date,
+  );
+  if (alreadyApplied || !(split.ratio > 0)) {
+    return portfolio;
+  }
+  const positions = {...portfolio.positions};
+  const position = positions[split.symbol];
+  if (position) {
+    const lots = position.lots.map(lot =>
+      lot.unitsAsOf < split.date
+        ? {
+            ...lot,
+            shares: roundShares(lot.shares * split.ratio),
+            price: lot.price / split.ratio,
+            unitsAsOf: split.date,
+          }
+        : lot,
+    );
+    positions[split.symbol] = buildPosition(
+      position.symbol,
+      position.name,
+      lots,
+    );
+  }
+  return {...portfolio, positions, splits: [...portfolio.splits, split]};
+};
+
+// Upgrades a portfolio saved by an older version of the app.
+// Version 1 stored each position as total shares plus an average cost, and
+// trades had no source. Each old position becomes a single lot dated at the
+// first purchase of that stock.
+export const migratePortfolio = (saved: any): Portfolio => {
+  if ((saved?.version ?? 1) >= PORTFOLIO_VERSION) {
+    return saved;
+  }
+  const transactions: Transaction[] = (saved.transactions ?? []).map(
+    (t: any) => ({...t, source: t.source ?? 'manual'}),
+  );
+  const firstBuy = (symbol: string) => {
+    const dates = transactions
+      .filter(t => t.symbol === symbol && t.side === 'BUY')
+      .map(t => t.date);
+    return dates.length ? Math.min(...dates) : saved.createdAt ?? Date.now();
+  };
+  const positions: Record<string, Position> = {};
+  for (const old of Object.values<any>(saved.positions ?? {})) {
+    if (!(old.shares > 0)) {
+      continue;
+    }
+    const date = firstBuy(old.symbol);
+    positions[old.symbol] = buildPosition(old.symbol, old.name, [
+      {
+        shares: old.shares,
+        price: old.avgCost,
+        date,
+        unitsAsOf: toMarketDate(date),
+      },
+    ]);
+  }
+  return {
+    ...saved,
+    version: PORTFOLIO_VERSION,
+    positions,
+    transactions,
+    splits: saved.splits ?? [],
   };
 };
 
@@ -246,8 +462,19 @@ export const tradedSymbols = (portfolio: Portfolio) => [
   ...new Set(portfolio.transactions.map(t => t.symbol)),
 ];
 
+// How many of today's shares one share from a trade has become, after the
+// splits that happened since its price was quoted.
+const splitFactor = (portfolio: Portfolio, trade: Transaction) => {
+  const unitsAsOf = trade.unitsAsOf ?? toMarketDate(trade.date);
+  return portfolio.splits
+    .filter(s => s.symbol === trade.symbol && s.date > unitsAsOf)
+    .reduce((factor, s) => factor * s.ratio, 1);
+};
+
 // Replays the trades over `timeline`, valuing shares at each symbol's last
 // known price at that moment (or the trade price before any data point).
+// Chart prices are split-adjusted, so trade shares are converted to today's
+// shares to match.
 export const portfolioHistory = (
   portfolio: Portfolio,
   prices: Record<string, ChartPoint[]>,
@@ -265,12 +492,19 @@ export const portfolioHistory = (
     .map(t => {
       while (next < trades.length && trades[next].date <= t) {
         const trade = trades[next++];
-        const direction = trade.side === 'BUY' ? 1 : -1;
-        cash -= direction * trade.total;
-        shares[trade.symbol] =
-          (shares[trade.symbol] ?? 0) + direction * trade.shares;
+        const factor = splitFactor(portfolio, trade);
+        const costs = (trade.fees ?? 0) + (trade.tax ?? 0);
+        if (trade.side === 'BUY') {
+          cash -= trade.total + costs;
+          shares[trade.symbol] =
+            (shares[trade.symbol] ?? 0) + trade.shares * factor;
+        } else {
+          cash += trade.total - costs;
+          shares[trade.symbol] =
+            (shares[trade.symbol] ?? 0) - trade.shares * factor;
+        }
         if (lastPrice[trade.symbol] === undefined) {
-          lastPrice[trade.symbol] = trade.price;
+          lastPrice[trade.symbol] = trade.price / factor;
         }
       }
       let value = cash;

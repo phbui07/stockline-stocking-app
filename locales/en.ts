@@ -25,6 +25,8 @@ const en: Record<keyof typeof vi, string> = {
   'common.marketClosed': 'Market closed',
   'common.updatedAt': 'Updated at {time}',
   'common.today': 'today',
+  'common.simulatedNote':
+    'Simulated with virtual money. For education only, not investment advice.',
 
   // Chart ranges
   'range.1D': '1D',
@@ -251,8 +253,7 @@ const en: Record<keyof typeof vi, string> = {
   'order.fundingSource': 'Funding source',
   'order.virtualAccount': 'Virtual account',
   'order.place': 'Place order',
-  'order.disclaimer':
-    'This is a simulated trade with virtual cash. Orders fill instantly at the latest price.',
+  'order.disclaimer': 'Orders fill instantly at the latest price.',
   'order.insufficientCash': "You don't have enough cash for this order.",
   'order.insufficientShares': "You don't own enough shares to sell.",
   'order.invalidQuantity': 'Quantity must be greater than 0.',

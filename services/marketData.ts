@@ -1,6 +1,8 @@
-// Market data from Yahoo Finance's public (unofficial) endpoints. This is the
-// only module that knows about Yahoo, so switching providers means rewriting
-// this file and keeping the exported types.
+// Market data from Yahoo Finance's public (unofficial) endpoints, for the
+// live screens: quotes, charts, search, news and company info. Daily closes
+// for the automation engine come through data/yahooProvider.ts instead, which
+// reuses getJSON. Switching providers means rewriting these two files and
+// keeping their exported types.
 
 import {readJSON, removeKey, writeJSON} from './storage';
 
@@ -100,7 +102,7 @@ const request = async (url: string, init?: RequestInit) => {
   }
 };
 
-const getJSON = async (url: string) => {
+export const getJSON = async (url: string) => {
   const res = await request(url);
   if (!res.ok) {
     throw new MarketDataError(`HTTP ${res.status} for ${url}`);

@@ -92,7 +92,8 @@ See [docs/PUBLISHING.md](docs/PUBLISHING.md) for the legal limits this feature i
 
 ## How it's organized
 
-- `services/marketData.ts` is the only file that talks to Yahoo Finance. To switch data providers, rewrite it and keep its exported types.
+- `services/marketData.ts` talks to Yahoo Finance for the live screens (quotes, charts, search, news). Daily closes for automations go through the provider interface in `services/data/`, which has a Yahoo version and an offline sample version. To switch data providers, rewrite `marketData.ts` and `data/yahooProvider.ts` and keep their exported types.
+- `services/engine/` holds the automation engine: pure functions with no screens and no network. See [docs/AUTOMATION.md](docs/AUTOMATION.md).
 - `services/quoteStore.ts` shares live quotes between screens and handles polling.
 - `services/portfolio.ts` and `services/alerts.ts` hold the trading and alert rules as pure, unit-tested functions.
 - `services/aiExplainer.ts` builds the AI prompt from public data, calls Gemini, filters out advice and caches results. `services/indicators.ts` computes the indicator history.

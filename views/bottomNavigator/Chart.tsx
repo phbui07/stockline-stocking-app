@@ -32,6 +32,7 @@ import {
   formatDateTime,
   formatMoney,
   formatPercent,
+  formatShares,
 } from '../../services/format';
 import PriceChart from '../../components/PriceChart';
 import StockRow from '../../components/StockRow';
@@ -118,7 +119,9 @@ const Chart = () => {
                 key={holding.position.symbol}
                 symbol={holding.position.symbol}
                 name={holding.position.name}
-                subtitle={t('common.shares', {count: holding.position.shares})}
+                subtitle={t('common.shares', {
+                  count: formatShares(holding.position.shares),
+                })}
                 quote={holding.quote}
                 onPress={() =>
                   navigation.navigate('ChartInfor', {

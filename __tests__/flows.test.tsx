@@ -313,6 +313,53 @@ it('blocks orders the account cannot afford', async () => {
   expect(screen.getByTestId('order-quantity')).toHaveDisplayValue('500');
 });
 
+it('upgrades a portfolio saved by the old app and buys fractional shares', async () => {
+  prices.AAPL = 200;
+  // How the previous version saved a position: just shares and average cost.
+  await AsyncStorage.setItem(
+    `stockline.user.${DEMO.email}`,
+    JSON.stringify({
+      portfolio: {
+        startingCash: 100000,
+        cash: 98500,
+        positions: {
+          AAPL: {symbol: 'AAPL', name: 'AAPL Corp', shares: 10, avgCost: 150},
+        },
+        transactions: [
+          {
+            id: 'old',
+            side: 'BUY',
+            symbol: 'AAPL',
+            name: 'AAPL Corp',
+            shares: 10,
+            price: 150,
+            total: 1500,
+            date: Date.parse('2026-10-15T16:00:00Z'),
+          },
+        ],
+        createdAt: 0,
+      },
+      watchlist: [],
+      alerts: [],
+      settings: {biometricForTrades: false, startingCash: 100000},
+    }),
+  );
+  await startLoggedIn();
+  await openStock('AAPL');
+  expect(screen.getByTestId('detail-position')).toHaveTextContent(/10/);
+
+  await fireEvent.press(screen.getByTestId('detail-buy'));
+  // Vietnamese keyboards type a decimal comma.
+  await placeOrder('0,5');
+
+  const saved = await savedUserData();
+  expect(saved.portfolio.version).toBe(2);
+  expect(saved.portfolio.cash).toBe(98500 - 100);
+  expect(saved.portfolio.positions.AAPL.shares).toBe(10.5);
+  expect(saved.portfolio.positions.AAPL.lots).toHaveLength(2);
+  expect(screen.getByTestId('detail-position')).toHaveTextContent(/10\.5/);
+});
+
 it('adds and removes stocks from the watchlist', async () => {
   await startLoggedIn();
   await fireEvent.press(screen.getByTestId('home-watchlist-add'));

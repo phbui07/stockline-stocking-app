@@ -35,6 +35,7 @@ import {
   formatDateTime,
   formatNumber,
   formatPercent,
+  formatShares,
 } from '../../services/format';
 import ScreenHeader from '../../components/ScreenHeader';
 import ApiKeyForm from '../../components/ApiKeyForm';
@@ -266,7 +267,7 @@ const PositionNote: React.FC<{symbol: string}> = ({symbol}) => {
       <Text style={styles.cardTitle}>{t('insights.positionTitle')}</Text>
       <Text style={styles.body}>
         {t('insights.positionDesc', {
-          shares: holding.position.shares,
+          shares: formatShares(holding.position.shares),
           percent: formatPercent(
             (holding.value / summary.totalValue) * 100,
             false,

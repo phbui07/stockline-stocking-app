@@ -53,6 +53,11 @@ export const formatPercent = (value: number, signed = true) => {
   return signed && amount > 0 ? `+${text}` : text;
 };
 
+// Share counts can be fractional: up to 6 decimals, without trailing zeros
+// (2.5, not 2.500000).
+export const formatShares = (value: number) =>
+  value.toLocaleString('en-US', {maximumFractionDigits: 6});
+
 export const formatNumber = (value: number) =>
   Math.round(value).toLocaleString('en-US');
 

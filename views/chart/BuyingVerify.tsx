@@ -16,16 +16,19 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {getCachedQuote, useQuote} from '../../services/quoteStore';
 import {useUserData} from '../../services/userData';
 import {
+  cleanSharesInput,
   maxAffordableShares,
   OrderError,
+  sharesToInput,
   TradeSide,
 } from '../../services/portfolio';
 import {isTradable} from '../../services/marketData';
 import BiometricAuth from '../../services/biometricAuth';
 import {TKey, useI18n} from '../../services/i18n';
-import {formatMoney} from '../../services/format';
+import {formatMoney, formatShares} from '../../services/format';
 import ScreenHeader from '../../components/ScreenHeader';
 import StockLogo from '../../components/StockLogo';
+import SimulatedBanner from '../../components/SimulatedBanner';
 import {LoadingOverlay} from '../../components/LoadingComponent';
 
 const ERROR_KEYS: Record<OrderError['code'], TKey> = {
@@ -60,7 +63,7 @@ const BuyingVerify = () => {
 
   const problem: TKey | null = !quote
     ? 'order.priceUnavailable'
-    : !Number.isInteger(shares) || shares <= 0
+    : !(shares > 0)
     ? 'order.invalidQuantity'
     : side === 'BUY' && total > cash
     ? 'order.insufficientCash'
@@ -68,8 +71,7 @@ const BuyingVerify = () => {
     ? 'order.insufficientShares'
     : null;
 
-  const setShares = (value: number) =>
-    setQuantityText(String(Math.max(0, Math.floor(value))));
+  const setShares = (value: number) => setQuantityText(sharesToInput(value));
 
   const execute = () => {
     // Fill at the freshest price, which may have moved since the screen opened.
@@ -89,7 +91,7 @@ const BuyingVerify = () => {
       Alert.alert(
         t('common.success'),
         t(side === 'BUY' ? 'order.successBuy' : 'order.successSell', {
-          shares: trade.shares,
+          shares: formatShares(trade.shares),
           symbol,
           price: formatMoney(trade.price),
         }),
@@ -128,7 +130,7 @@ const BuyingVerify = () => {
       t('order.confirmTitle', {side: sideLabel.toLowerCase()}),
       t('order.confirmMessage', {
         side: sideLabel,
-        shares,
+        shares: formatShares(shares),
         symbol,
         price: formatMoney(price),
         total: formatMoney(total),
@@ -146,7 +148,7 @@ const BuyingVerify = () => {
     [t('order.estimatedTotal'), formatMoney(total), '#FFED4B'],
     side === 'BUY'
       ? [t('order.cashAvailable'), formatMoney(cash)]
-      : [t('order.sharesOwned'), String(owned)],
+      : [t('order.sharesOwned'), formatShares(owned)],
     [t('order.cashAfter'), formatMoney(cashAfter)],
     [t('order.fundingSource'), t('order.virtualAccount'), '#FFED4B'],
   ];
@@ -208,10 +210,8 @@ const BuyingVerify = () => {
                 testID="order-quantity"
                 style={styles.quantityInput}
                 value={quantityText}
-                onChangeText={text =>
-                  setQuantityText(text.replace(/[^0-9]/g, ''))
-                }
-                keyboardType="number-pad"
+                onChangeText={text => setQuantityText(cleanSharesInput(text))}
+                keyboardType="decimal-pad"
                 selectTextOnFocus
               />
               <TouchableOpacity
@@ -241,7 +241,7 @@ const BuyingVerify = () => {
           {problem && quantityText ? (
             <Text style={styles.problemText}>{t(problem)}</Text>
           ) : null}
-          <Text style={styles.greyTxt}>{t('order.disclaimer')}</Text>
+          <SimulatedBanner detail={t('order.disclaimer')} />
           {quote && !isTradable(quote) ? (
             <Text style={styles.problemText}>{t('detail.notTradable')}</Text>
           ) : (
@@ -382,11 +382,6 @@ const styles = StyleSheet.create({
   problemText: {
     color: '#FF4444',
     fontSize: 13,
-  },
-  greyTxt: {
-    color: '#76787E',
-    fontSize: 12,
-    fontWeight: '500',
   },
   placeBtn: {
     paddingHorizontal: vw(5),

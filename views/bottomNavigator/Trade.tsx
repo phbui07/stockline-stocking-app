@@ -27,6 +27,7 @@ import {
   formatDateTime,
   formatMoney,
   formatPercent,
+  formatShares,
 } from '../../services/format';
 import StockLogo from '../../components/StockLogo';
 
@@ -311,7 +312,9 @@ const TransactionCard: React.FC<{transaction: Transaction}> = ({
       <View style={styles.transactionDetails}>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>{t('trade.quantity')}</Text>
-          <Text style={styles.detailValue}>{transaction.shares}</Text>
+          <Text style={styles.detailValue}>
+            {formatShares(transaction.shares)}
+          </Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>{t('trade.price')}</Text>

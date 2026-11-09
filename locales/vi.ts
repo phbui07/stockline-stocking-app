@@ -24,6 +24,8 @@ const vi = {
   'common.marketClosed': 'Thị trường đã đóng',
   'common.updatedAt': 'Cập nhật lúc {time}',
   'common.today': 'hôm nay',
+  'common.simulatedNote':
+    'Mô phỏng bằng tiền ảo. Chỉ để học tập, không phải lời khuyên đầu tư.',
 
   // Chart ranges
   'range.1D': '1 ngày',
@@ -251,8 +253,7 @@ const vi = {
   'order.fundingSource': 'Nguồn tiền',
   'order.virtualAccount': 'Tài khoản ảo',
   'order.place': 'Đặt lệnh',
-  'order.disclaimer':
-    'Đây là giao dịch mô phỏng bằng tiền ảo. Lệnh được khớp ngay tại giá gần nhất.',
+  'order.disclaimer': 'Lệnh được khớp ngay tại giá gần nhất.',
   'order.insufficientCash': 'Không đủ tiền mặt cho lệnh này.',
   'order.insufficientShares': 'Bạn không có đủ cổ phiếu để bán.',
   'order.invalidQuantity': 'Số lượng phải lớn hơn 0.',
