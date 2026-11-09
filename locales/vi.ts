@@ -558,6 +558,59 @@ const vi = {
   'reason.recurringBuy': 'Mua định kỳ {amount}',
   'reason.recurringSkippedCash':
     'Bỏ qua: cần {amount} nhưng chỉ còn {cash} tiền mặt',
+  // Risk rules
+  'risk.title': 'Quy tắc rủi ro',
+  'risk.stopLoss': 'Cắt lỗ',
+  'risk.takeProfit': 'Chốt lời',
+  'risk.trailingStop': 'Dừng lỗ động',
+  'risk.stopLossExplain':
+    'Hạn chế khoản lỗ: bán hết nếu giá giảm một tỷ lệ nhất định dưới giá bạn đã mua.',
+  'risk.takeProfitExplain':
+    'Chốt khoản lãi: bán hết nếu giá tăng một tỷ lệ nhất định trên giá bạn đã mua.',
+  'risk.trailingStopExplain':
+    'Giữ lãi khi giá tăng: ngưỡng bán nằm dưới giá đóng cửa cao nhất kể từ khi bạn mua một tỷ lệ nhất định, và chỉ đi lên.',
+  'risk.intro':
+    'Quy tắc tự động bán toàn bộ vị thế khi giá đóng cửa vượt qua một ngưỡng. Mỗi quy tắc chỉ xét giá đóng cửa sau khi bạn bật nó.',
+  'risk.boughtOn': 'Ngày mua',
+  'risk.lastClose': 'Giá đóng cửa gần nhất ({date})',
+  'risk.highestClose': 'Đóng cửa cao nhất từ khi mua ({date})',
+  'risk.notHeld':
+    'Bạn không còn nắm giữ {symbol}, nên không có quy tắc nào đang chạy.',
+  'risk.on': 'Đang bật',
+  'risk.off': 'Tắt',
+  'risk.turnOn': 'Bật',
+  'risk.update': 'Cập nhật',
+  'risk.turnOff': 'Tắt',
+  'risk.percentPlaceholder': 'Ví dụ: 8',
+  'risk.invalidPercent': 'Nhập tỷ lệ từ {min}% đến {max}%.',
+  'risk.lineStopLoss':
+    'Bán nếu một phiên đóng cửa ở {line} hoặc thấp hơn, tức {percent}% dưới giá vốn trung bình {reference}.',
+  'risk.lineTakeProfit':
+    'Bán nếu một phiên đóng cửa ở {line} hoặc cao hơn, tức {percent}% trên giá vốn trung bình {reference}.',
+  'risk.lineTrailingStop':
+    'Bán nếu một phiên đóng cửa ở {line} hoặc thấp hơn, tức {percent}% dưới giá đóng cửa cao nhất từ khi mua ({reference}). Ngưỡng này đi lên khi giá lập đỉnh mới và không bao giờ đi xuống.',
+  'risk.noCloseYet':
+    'Chưa có giá đóng cửa nào kể từ khi bạn mua, nên ngưỡng sẽ tính từ phiên đóng cửa đầu tiên.',
+  'risk.alreadyPast':
+    'Giá đóng cửa gần nhất ({close}) đã vượt ngưỡng này. Nếu phiên tới cũng vậy, lệnh sẽ bán.',
+  'risk.nextCheck': 'Lần kiểm tra tới: giá đóng cửa {date}.',
+  'risk.gapNote':
+    'Quy tắc được kiểm tra mỗi ngày một lần, theo giá đóng cửa. Nếu giá tăng hay giảm mạnh trong một ngày, lệnh bán sẽ khớp ở giá đóng cửa đó và có thể vượt qua ngưỡng của bạn.',
+  'risk.history': 'Quy tắc trước đây',
+  'risk.triggeredOn': '{rule} {percent}%: đã bán ngày {date}',
+  'risk.endedOn':
+    '{rule} {percent}%: kết thúc ngày {date} vì vị thế đã được bán',
+  'risk.activeCount': '{count} đang bật',
+  'risk.hubExplain':
+    'Bán tự động bằng cắt lỗ, chốt lời hoặc dừng lỗ động. Thêm quy tắc từ một cổ phiếu bạn đang nắm giữ.',
+  'risk.hubEmpty': 'Chưa có quy tắc rủi ro nào đang bật.',
+  'risk.soldSummary': 'Đã bán {symbol}: {rule} {percent}% ngày {date}',
+  'reason.stopLoss':
+    'Đã bán: chạm cắt lỗ (−{percent}%). Đóng cửa ở {close}, {move} so với giá vốn trung bình {reference}.',
+  'reason.takeProfit':
+    'Đã bán: chạm chốt lời (+{percent}%). Đóng cửa ở {close}, {move} so với giá vốn trung bình {reference}.',
+  'reason.trailingStop':
+    'Đã bán: chạm dừng lỗ động (−{percent}%). Đóng cửa ở {close}, {move} so với giá đóng cửa cao nhất {reference}.',
 };
 
 export default vi;

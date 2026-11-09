@@ -10,7 +10,7 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
 |---|---|---|
 | 0 | Foundations: price-data interface, market dates, fractional shares, lots, trade sources and reasons | Done |
 | 1 | Recurring investments (dollar-cost averaging) | Done |
-| 2 | Automatic risk rules: stop-loss, take-profit, trailing stop | |
+| 2 | Automatic risk rules: stop-loss, take-profit, trailing stop | Done |
 | 3 | Strategy engine and moving-average crossover bot | |
 | 4 | Backtester | |
 | 5 | Realistic costs: slippage and short-term tax | |
@@ -23,7 +23,8 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
 - `services/engine/`: the engine. Pure TypeScript with no React and no network, so every rule can be unit tested with small, hand-calculated price series.
   - `dates.ts`: market dates.
   - `recurring.ts`: recurring-investment schedules.
-  - `runner.ts`: replays missed days in order. Each phase adds its step to the same day-by-day loop.
+  - `risk.ts`: stop-loss, take-profit and trailing-stop lines.
+  - `runner.ts`: replays missed days in order. Each day it checks risk rules first, then makes recurring purchases. Later phases add their steps to the same loop.
 - `services/automation.tsx`: saves each user's automations (`stockline.automation.<email>`), downloads prices and calls the runner. It runs when the app opens, when it returns from the background, every 15 minutes while it's open, after a rule changes, and on "Check now".
 - `services/reasons.ts`: turns stored reasons and schedules into sentences in the current language.
 - `views/automation/`: the Automate screens.
@@ -75,6 +76,25 @@ These keep the simulation simple. Each one is a known gap from real trading.
 - **No double purchases:** each purchase has a fixed id (`recurring:<rule>:<date>`), so a run repeated after a crash doesn't buy twice.
 - **Splits:** the runner downloads split events for held stocks and converts older lots (see Assumptions).
 - **Order of trade history:** catch-up purchases are dated at their past close, so `executeOrder` inserts trades by date to keep the history newest first.
+
+## Risk rules (Phase 2)
+
+- **Where to set them:** on a stock you own: stock page → Your position → Risk rules. You can have one of each kind per position.
+- **Lines:**
+  - stop-loss: average cost × (100 − X) / 100;
+  - take-profit: average cost × (100 + X) / 100;
+  - trailing stop: highest close since the oldest remaining purchase × (100 − X) / 100.
+
+  A close that touches the line counts.
+- **No hindsight:** a rule only checks closes that weren't known when it was turned on (`startDate`). The runner's day loop can replay earlier days for other automations, and a test makes sure the rule ignores them.
+- **Each close is checked once:** a rule remembers `checkedThrough`, so a later purchase that changes the average cost can't make it re-check an old close and sell after the fact.
+- **The trailing stop counts highs from before the rule existed.** The spec says "highest close since purchase". So if the price has already fallen far from its peak, the first close checked can sell. The rule screen warns about this.
+- **Selling:**
+  - A triggered rule sells the whole position at that day's close. After a big one-day move, that can be well past the line.
+  - The position's other rules end.
+  - Selling the whole position by hand also ends its rules.
+- **Same-day order:** risk rules run before recurring purchases, so a stop-loss acts on what you held coming into the day.
+- **No double sales:** each sale's id is `risk:<rule>`, so one rule can't sell twice.
 
 ## Saved-data versions
 

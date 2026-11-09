@@ -562,6 +562,58 @@ const en: Record<keyof typeof vi, string> = {
   'reason.recurringBuy': 'Recurring purchase of {amount}',
   'reason.recurringSkippedCash':
     'Skipped: needed {amount}, but only {cash} cash was available',
+  // Risk rules
+  'risk.title': 'Risk rules',
+  'risk.stopLoss': 'Stop-loss',
+  'risk.takeProfit': 'Take-profit',
+  'risk.trailingStop': 'Trailing stop',
+  'risk.stopLossExplain':
+    'Limits a loss: sells everything if the price falls a set percentage below what you paid.',
+  'risk.takeProfitExplain':
+    'Locks in a gain: sells everything if the price rises a set percentage above what you paid.',
+  'risk.trailingStopExplain':
+    'Protects a gain as it grows: the sell line sits a set percentage below the highest close since you bought, and only moves up.',
+  'risk.intro':
+    'Rules sell your whole position automatically when a daily close crosses a line. Each rule only checks closes from after you turn it on.',
+  'risk.boughtOn': 'Bought on',
+  'risk.lastClose': 'Latest close ({date})',
+  'risk.highestClose': 'Highest close since you bought ({date})',
+  'risk.notHeld': "You don't own {symbol} anymore, so it has no active rules.",
+  'risk.on': 'On',
+  'risk.off': 'Off',
+  'risk.turnOn': 'Turn on',
+  'risk.update': 'Update',
+  'risk.turnOff': 'Turn off',
+  'risk.percentPlaceholder': 'e.g. 8',
+  'risk.invalidPercent': 'Enter a percentage from {min}% to {max}%.',
+  'risk.lineStopLoss':
+    'Sells if a day closes at or below {line}, {percent}% under your average cost of {reference}.',
+  'risk.lineTakeProfit':
+    'Sells if a day closes at or above {line}, {percent}% over your average cost of {reference}.',
+  'risk.lineTrailingStop':
+    'Sells if a day closes at or below {line}, {percent}% under the highest close since you bought ({reference}). The line rises with new highs and never falls.',
+  'risk.noCloseYet':
+    "There's no closing price since you bought yet, so the line starts from the first close.",
+  'risk.alreadyPast':
+    'The latest close ({close}) is already past this line. If the next close is too, it sells.',
+  'risk.nextCheck': 'Next check: the close on {date}.',
+  'risk.gapNote':
+    'Rules are checked once a day, at the closing price. If the price jumps or drops a lot in one day, the sale happens at that close, which can be past your line.',
+  'risk.history': 'Past rules',
+  'risk.triggeredOn': '{rule} {percent}%: sold on {date}',
+  'risk.endedOn':
+    '{rule} {percent}%: ended on {date} when the position was sold',
+  'risk.activeCount': '{count} on',
+  'risk.hubExplain':
+    'Sell automatically with a stop-loss, take-profit or trailing stop. Add rules from a stock you own.',
+  'risk.hubEmpty': 'No active risk rules.',
+  'risk.soldSummary': 'Sold {symbol}: {rule} {percent}% on {date}',
+  'reason.stopLoss':
+    'Sold: stop-loss (−{percent}%) triggered. Closed at {close}, {move} from your average cost of {reference}.',
+  'reason.takeProfit':
+    'Sold: take-profit (+{percent}%) triggered. Closed at {close}, {move} from your average cost of {reference}.',
+  'reason.trailingStop':
+    'Sold: trailing stop (−{percent}%) triggered. Closed at {close}, {move} from the highest close of {reference}.',
 };
 
 export default en;

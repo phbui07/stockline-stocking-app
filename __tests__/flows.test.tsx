@@ -452,6 +452,160 @@ describe('recurring investments', () => {
   }, 20000);
 });
 
+describe('risk rules', () => {
+  const realProvider = getPriceProvider();
+  afterEach(() => setPriceProvider(realProvider));
+
+  it('turns rules on, changes and turns them off from a stock you own', async () => {
+    prices.AAPL = 200;
+    setPriceProvider(new MockPriceProvider({}));
+    await startLoggedIn();
+    await openStock('AAPL');
+    await fireEvent.press(screen.getByTestId('detail-buy'));
+    await placeOrder('2');
+    await fireEvent.press(await screen.findByTestId('detail-risk'));
+
+    // Average cost $200, 10% stop-loss → line at $180.
+    await fireEvent.changeText(
+      await screen.findByTestId('risk-percent-stopLoss'),
+      '10',
+    );
+    expect(screen.getByTestId('risk-line-stopLoss')).toHaveTextContent(
+      /\$180\.00/,
+    );
+    await fireEvent.press(screen.getByTestId('risk-save-stopLoss'));
+    expect(screen.getByTestId('risk-status-stopLoss')).toHaveTextContent(
+      'Đang bật',
+    );
+
+    // 25% take-profit → $250. An impossible stop-loss shows an error.
+    await fireEvent.changeText(
+      screen.getByTestId('risk-percent-takeProfit'),
+      '25',
+    );
+    await fireEvent.press(screen.getByTestId('risk-save-takeProfit'));
+    await fireEvent.changeText(
+      screen.getByTestId('risk-percent-stopLoss'),
+      '95',
+    );
+    expect(screen.getByTestId('risk-save-stopLoss')).toBeDisabled();
+    await fireEvent.changeText(
+      screen.getByTestId('risk-percent-stopLoss'),
+      '7,5',
+    );
+    await fireEvent.press(screen.getByTestId('risk-save-stopLoss'));
+
+    let automation = JSON.parse(
+      (await AsyncStorage.getItem(`stockline.automation.${DEMO.email}`))!,
+    );
+    expect(
+      automation.risk.map((r: any) => [r.kind, r.percent, r.status]),
+    ).toEqual([
+      ['stopLoss', 7.5, 'active'],
+      ['takeProfit', 25, 'active'],
+    ]);
+
+    await fireEvent.press(screen.getByTestId('risk-remove-takeProfit'));
+    expect(screen.getByTestId('risk-status-takeProfit')).toHaveTextContent(
+      'Tắt',
+    );
+
+    // Selling the whole position yourself ends the remaining rule.
+    await fireEvent.press(screen.getByLabelText('Quay lại'));
+    await fireEvent.press(await screen.findByTestId('detail-sell'));
+    await placeOrder('2');
+    await waitFor(async () => {
+      automation = JSON.parse(
+        (await AsyncStorage.getItem(`stockline.automation.${DEMO.email}`))!,
+      );
+      expect(automation.risk.map((r: any) => r.status)).toEqual(['ended']);
+    });
+  }, 20000);
+
+  it('sells when a close crosses the line while the app was closed', async () => {
+    // You bought 10 AAPL at $100 three weeks ago and set a 10% stop-loss a
+    // week later. Since then it closed at $95, then $85.
+    const last = lastCompletedMarketDate();
+    const days = [addDays(last, -14), addDays(last, -7), last];
+    setPriceProvider(
+      new MockPriceProvider({AAPL: {dates: days, closes: [100, 95, 85]}}),
+    );
+    await AsyncStorage.setItem(
+      `stockline.user.${DEMO.email}`,
+      JSON.stringify({
+        portfolio: {
+          startingCash: 100000,
+          cash: 99000,
+          positions: {
+            AAPL: {symbol: 'AAPL', name: 'AAPL Corp', shares: 10, avgCost: 100},
+          },
+          transactions: [
+            {
+              id: 'buy',
+              side: 'BUY',
+              symbol: 'AAPL',
+              name: 'AAPL Corp',
+              shares: 10,
+              price: 100,
+              total: 1000,
+              date: Date.parse(`${days[0]}T16:00:00Z`),
+            },
+          ],
+          createdAt: 0,
+        },
+        watchlist: [],
+        alerts: [],
+        settings: {biometricForTrades: false, startingCash: 100000},
+      }),
+    );
+    await AsyncStorage.setItem(
+      `stockline.automation.${DEMO.email}`,
+      JSON.stringify({
+        version: 1,
+        recurring: [],
+        events: [],
+        risk: [
+          {
+            id: 'k1',
+            symbol: 'AAPL',
+            kind: 'stopLoss',
+            percent: 10,
+            createdAt: 0,
+            startDate: days[1],
+            status: 'active',
+          },
+        ],
+      }),
+    );
+
+    await startLoggedIn();
+    // The runner checks both missed closes as soon as the app opens.
+    await waitFor(async () => {
+      const saved = await savedUserData();
+      expect(saved.portfolio.positions.AAPL).toBeUndefined();
+    });
+    const saved = await savedUserData();
+    expect(saved.portfolio.cash).toBe(99000 + 850);
+    expect(saved.portfolio.transactions[0]).toMatchObject({
+      side: 'SELL',
+      price: 85,
+      source: 'risk',
+    });
+
+    await fireEvent.press(screen.getByTestId('tab-Trade'));
+    await fireEvent.press(await screen.findByTestId('trade-tab-history'));
+    expect(
+      screen.getByText(
+        'Đã bán: chạm cắt lỗ (−10%). Đóng cửa ở $85.00, -15.00% so với giá vốn trung bình $100.00.',
+      ),
+    ).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('trade-automate'));
+    expect(await screen.findByTestId('risk-recent')).toHaveTextContent(
+      /Đã bán AAPL: Cắt lỗ 10%/,
+    );
+  }, 20000);
+});
+
 it('adds and removes stocks from the watchlist', async () => {
   await startLoggedIn();
   await fireEvent.press(screen.getByTestId('home-watchlist-add'));

@@ -24,6 +24,7 @@ import {
   RecurringRule,
   setRulePaused,
 } from './engine/recurring';
+import {createRiskRule, RiskKind, RiskRule} from './engine/risk';
 import {
   AutomationEvent,
   priceRequests,
@@ -39,6 +40,7 @@ import {
 export const AUTOMATION_VERSION = 1;
 export const RUN_EVERY_MS = 15 * 60 * 1000;
 const MAX_EVENTS = 200;
+const MAX_FINISHED_RISK_RULES = 50; // triggered or ended rules kept for history
 
 export interface LastRun {
   at: number;
@@ -49,6 +51,7 @@ export interface LastRun {
 export interface AutomationData {
   version: number;
   recurring: RecurringRule[];
+  risk: RiskRule[];
   events: AutomationEvent[]; // newest first
   lastRun?: LastRun;
 }
@@ -56,8 +59,20 @@ export interface AutomationData {
 export const createAutomationData = (): AutomationData => ({
   version: AUTOMATION_VERSION,
   recurring: [],
+  risk: [],
   events: [],
 });
+
+// Keeps every active rule, plus the most recent finished ones.
+const trimRisk = (rules: RiskRule[]) => {
+  const finished = rules
+    .filter(rule => rule.status !== 'active')
+    .sort((a, b) => ((a.endedOn ?? '') < (b.endedOn ?? '') ? 1 : -1))
+    .slice(0, MAX_FINISHED_RISK_RULES);
+  return rules.filter(
+    rule => rule.status === 'active' || finished.includes(rule),
+  );
+};
 
 const automationKey = (email: string) => `stockline.automation.${email}`;
 
@@ -69,6 +84,9 @@ interface AutomationValue {
   editRecurring: (id: string, input: RecurringInput) => void;
   setRecurringPaused: (id: string, paused: boolean) => void;
   removeRecurring: (id: string) => void;
+  // Turns a risk rule on for a position, or changes its percent.
+  setRisk: (symbol: string, kind: RiskKind, percent: number) => void;
+  removeRisk: (id: string) => void;
   runNow: () => Promise<void>;
 }
 
@@ -140,6 +158,7 @@ export const AutomationProvider: React.FC<{children: React.ReactNode}> = ({
     const requests = priceRequests(
       userDataRef.current.data.portfolio,
       dataRef.current.recurring,
+      dataRef.current.risk,
       through,
     );
     const symbols = Object.keys(requests);
@@ -172,6 +191,7 @@ export const AutomationProvider: React.FC<{children: React.ReactNode}> = ({
         result = runAutomations({
           portfolio,
           recurring: dataRef.current.recurring,
+          risk: dataRef.current.risk,
           histories,
           through,
           unitsAsOf: toMarketDate(now),
@@ -187,6 +207,7 @@ export const AutomationProvider: React.FC<{children: React.ReactNode}> = ({
         return {
           ...current,
           recurring: outcome.recurring,
+          risk: trimRisk(outcome.risk),
           events: [...newEvents, ...current.events].slice(0, MAX_EVENTS),
           lastRun: {at: now, through, failed},
         };
@@ -219,6 +240,34 @@ export const AutomationProvider: React.FC<{children: React.ReactNode}> = ({
       subscription.remove();
     };
   }, [ready, runNow]);
+
+  // Selling a whole position yourself ends its risk rules right away, so
+  // they don't wake up again if you buy the stock later.
+  const heldKey = Object.keys(userData.data.portfolio.positions)
+    .sort()
+    .join(',');
+  useEffect(() => {
+    if (!ready) {
+      return;
+    }
+    const held = new Set(heldKey.split(','));
+    const orphaned = (rule: RiskRule) =>
+      rule.status === 'active' && !held.has(rule.symbol);
+    if (!dataRef.current.risk.some(orphaned)) {
+      return;
+    }
+    const today = toMarketDate(Date.now());
+    update(current => ({
+      ...current,
+      risk: trimRisk(
+        current.risk.map(rule =>
+          orphaned(rule)
+            ? {...rule, status: 'ended' as const, endedOn: today}
+            : rule,
+        ),
+      ),
+    }));
+  }, [ready, heldKey, update]);
 
   const value = useMemo<AutomationValue>(() => {
     const changeRule = (
@@ -257,6 +306,30 @@ export const AutomationProvider: React.FC<{children: React.ReactNode}> = ({
         update(current => ({
           ...current,
           recurring: current.recurring.filter(rule => rule.id !== id),
+        })),
+      setRisk: (symbol, kind, percent) => {
+        update(current => {
+          const existing = current.risk.find(
+            rule =>
+              rule.symbol === symbol &&
+              rule.kind === kind &&
+              rule.status === 'active',
+          );
+          return {
+            ...current,
+            risk: existing
+              ? current.risk.map(rule =>
+                  rule === existing ? {...rule, percent} : rule,
+                )
+              : [...current.risk, createRiskRule(symbol, kind, percent)],
+          };
+        });
+        runNow();
+      },
+      removeRisk: id =>
+        update(current => ({
+          ...current,
+          risk: current.risk.filter(rule => rule.id !== id),
         })),
       runNow,
     };

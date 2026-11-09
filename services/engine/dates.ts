@@ -92,6 +92,15 @@ export const lastCompletedMarketDate = (now = Date.now()): MarketDate => {
 export const nextOpenMarketDate = (now = Date.now()): MarketDate =>
   addDays(lastCompletedMarketDate(now), 1);
 
+// The date itself if it's a weekday, otherwise the following Monday.
+export const nextWeekday = (date: MarketDate): MarketDate => {
+  let day = date;
+  while (!isWeekday(day)) {
+    day = addDays(day, 1);
+  }
+  return day;
+};
+
 const pad = (value: number) => String(value).padStart(2, '0');
 
 export const makeMarketDate = (year: number, month: number, day: number) =>

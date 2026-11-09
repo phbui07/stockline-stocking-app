@@ -18,6 +18,7 @@ import {addIcon, nextIcon, notiIcon} from '../../assets/svgXML';
 import {BarChart} from 'react-native-gifted-charts/dist/BarChart';
 import {useQuote} from '../../services/quoteStore';
 import {useUserData} from '../../services/userData';
+import {useAutomation} from '../../services/automation';
 import {toHolding} from '../../services/portfolio';
 import {
   ChartData,
@@ -305,6 +306,12 @@ const PositionCard: React.FC<{holding: ReturnType<typeof toHolding>}> = ({
   holding,
 }) => {
   const {t} = useI18n();
+  const navigation = useNavigation<Nav>();
+  const {data} = useAutomation();
+  const {symbol} = holding.position;
+  const activeRules = data.risk.filter(
+    rule => rule.symbol === symbol && rule.status === 'active',
+  ).length;
   const rows: [string, string, string?][] = [
     [t('detail.positionShares'), formatShares(holding.position.shares)],
     [t('detail.positionAvg'), formatMoney(holding.position.avgCost)],
@@ -328,6 +335,18 @@ const PositionCard: React.FC<{holding: ReturnType<typeof toHolding>}> = ({
           </Text>
         </View>
       ))}
+      <TouchableOpacity
+        testID="detail-risk"
+        style={styles.riskButton}
+        onPress={() => navigation.navigate('RiskRules', {symbol})}>
+        <Text style={styles.riskButtonText}>{t('risk.title')}</Text>
+        <Text style={styles.riskButtonCount}>
+          {activeRules
+            ? t('risk.activeCount', {count: activeRules})
+            : t('risk.off')}
+        </Text>
+        {nextIcon(vw(5), vw(5), '#FFED4B')}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -712,6 +731,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#2C2C2C',
     borderRadius: 10,
     padding: vw(4),
+  },
+  riskButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    columnGap: vw(2),
+    marginTop: vh(1.5),
+    paddingTop: vh(1.5),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#404040',
+  },
+  riskButtonText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  riskButtonCount: {
+    color: '#76787E',
+    fontSize: 13,
   },
   sectionTitle: {
     color: '#FFFFFF',

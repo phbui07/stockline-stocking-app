@@ -17,8 +17,9 @@ import {
   formatMarketDate,
   formatMoney,
 } from '../../services/format';
-import {describeSchedule} from '../../services/reasons';
+import {describeSchedule, RISK_LABELS} from '../../services/reasons';
 import type {RecurringRule} from '../../services/engine/recurring';
+import type {RiskRule} from '../../services/engine/risk';
 import ScreenHeader from '../../components/ScreenHeader';
 import SimulatedBanner from '../../components/SimulatedBanner';
 import StockLogo from '../../components/StockLogo';
@@ -29,6 +30,13 @@ const Automate = () => {
   const {t, lang} = useI18n();
   const {data, running, runNow} = useAutomation();
   const {lastRun} = data;
+  // Active risk rules grouped by stock, and the few most recent sales.
+  const activeRisk = data.risk.filter(rule => rule.status === 'active');
+  const riskSymbols = [...new Set(activeRisk.map(rule => rule.symbol))];
+  const recentlySold = data.risk
+    .filter(rule => rule.status === 'triggered')
+    .sort((a, b) => ((a.endedOn ?? '') < (b.endedOn ?? '') ? 1 : -1))
+    .slice(0, 5);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -61,6 +69,35 @@ const Automate = () => {
             />
           ))
         )}
+
+        <Text style={[styles.sectionTitle, styles.sectionGap]}>
+          {t('risk.title')}
+        </Text>
+        <Text style={styles.explain}>{t('risk.hubExplain')}</Text>
+        {riskSymbols.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.grey}>{t('risk.hubEmpty')}</Text>
+          </View>
+        ) : (
+          riskSymbols.map(symbol => (
+            <RiskSummaryCard
+              key={symbol}
+              symbol={symbol}
+              rules={activeRisk.filter(rule => rule.symbol === symbol)}
+              onPress={() => navigation.navigate('RiskRules', {symbol})}
+            />
+          ))
+        )}
+        {recentlySold.map(rule => (
+          <Text key={rule.id} testID="risk-recent" style={styles.grey}>
+            {t('risk.soldSummary', {
+              symbol: rule.symbol,
+              rule: t(RISK_LABELS[rule.kind]),
+              percent: rule.percent,
+              date: formatMarketDate(rule.endedOn ?? '', lang),
+            })}
+          </Text>
+        ))}
 
         <View style={styles.statusCard}>
           <Text testID="automate-status" style={styles.grey}>
@@ -120,6 +157,30 @@ const RecurringCard: React.FC<{rule: RecurringRule; onPress: () => void}> = ({
   );
 };
 
+const RiskSummaryCard: React.FC<{
+  symbol: string;
+  rules: RiskRule[];
+  onPress: () => void;
+}> = ({symbol, rules, onPress}) => {
+  const {t} = useI18n();
+  return (
+    <TouchableOpacity
+      testID={`risk-summary-${symbol}`}
+      style={styles.card}
+      onPress={onPress}>
+      <StockLogo symbol={symbol} size={vw(10)} />
+      <View style={styles.cardText}>
+        <Text style={styles.cardTitle}>{symbol}</Text>
+        <Text style={styles.grey}>
+          {rules
+            .map(rule => `${t(RISK_LABELS[rule.kind])} ${rule.percent}%`)
+            .join(' · ')}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 export default Automate;
 
 const styles = StyleSheet.create({
@@ -139,6 +200,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  sectionGap: {
+    marginTop: vh(2),
   },
   addBtn: {
     backgroundColor: '#FFED4B',

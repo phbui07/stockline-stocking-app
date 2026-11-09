@@ -1,7 +1,8 @@
 import type {TKey} from './i18n';
 import type {TradeReason} from './portfolio';
 import type {Frequency, Schedule} from './engine/recurring';
-import {formatMoney} from './format';
+import type {RiskKind} from './engine/risk';
+import {formatMoney, formatPercent} from './format';
 
 // Turns automation data into sentences in the current language. Reasons are
 // saved as a code plus numbers, not as text, so switching language
@@ -34,6 +35,18 @@ export const WEEKDAY_SHORT: TKey[] = [
   'weekdayShort.5',
 ];
 
+export const RISK_LABELS: Record<RiskKind, TKey> = {
+  stopLoss: 'risk.stopLoss',
+  takeProfit: 'risk.takeProfit',
+  trailingStop: 'risk.trailingStop',
+};
+
+const RISK_REASONS: Record<RiskKind, TKey> = {
+  stopLoss: 'reason.stopLoss',
+  takeProfit: 'reason.takeProfit',
+  trailingStop: 'reason.trailingStop',
+};
+
 export const describeSchedule = (schedule: Schedule, t: Translate) => {
   if (schedule.frequency === 'monthly') {
     return t('schedule.monthly', {day: schedule.dayOfMonth});
@@ -55,6 +68,20 @@ export const describeReason = (reason: TradeReason, t: Translate) => {
         amount: money('amount'),
         cash: money('cash'),
       });
+    case 'stopLoss':
+    case 'takeProfit':
+    case 'trailingStop': {
+      // e.g. "Sold: trailing stop (−8%) triggered. Closed at $110.00,
+      // −8.33% from the highest close of $120.00."
+      const close = Number(params.close);
+      const reference = Number(params.reference);
+      return t(RISK_REASONS[reason.code as RiskKind], {
+        percent: Number(params.percent),
+        close: money('close'),
+        reference: money('reference'),
+        move: formatPercent((close / reference - 1) * 100),
+      });
+    }
     default:
       return reason.code; // a code from a newer version of the app
   }

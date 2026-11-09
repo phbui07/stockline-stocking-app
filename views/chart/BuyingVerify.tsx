@@ -155,7 +155,9 @@ const BuyingVerify = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView keyboardShouldPersistTaps="handled">
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         <ScreenHeader title={t('order.title')} />
         <View style={{paddingHorizontal: vw(5), rowGap: vh(2)}}>
           <View style={styles.sideToggle}>

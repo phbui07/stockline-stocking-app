@@ -98,7 +98,8 @@ const RecurringEdit = () => {
       />
       <ScrollView
         contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         <View style={styles.stockCard}>
           <StockLogo symbol={symbol} size={vw(10)} />
           <View style={styles.flex}>
