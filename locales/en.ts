@@ -617,7 +617,7 @@ const en: Record<keyof typeof vi, string> = {
   // Strategy bots
   'bot.title': 'Strategy bots',
   'bot.hubExplain':
-    'A bot follows a trading rule on one stock. Set one up and see where its signals fell over the past year. Bots don’t trade yet: testing them on past prices comes next.',
+    'A bot follows a trading rule on one stock. Set one up, see where its signals fell, and backtest it on past prices. Bots don’t trade your portfolio yet.',
   'bot.empty': 'No bots yet.',
   'bot.newTitle': 'New strategy bot',
   'bot.editTitle': 'Edit strategy bot',
@@ -662,7 +662,7 @@ const en: Record<keyof typeof vi, string> = {
     'This shows only where the rule would have bought and sold, at closing prices. Money, position sizes and exits come with the backtester.',
   'bot.lastSignal': 'Most recent signal ({date}): {reason}',
   'bot.notLive':
-    'Bots don’t trade yet. You’ll be able to test this one on past prices, then run it with virtual money.',
+    'Bots don’t trade your portfolio yet. Backtest this one on past prices first; running bots forward with virtual money comes later.',
   'bot.chartLabel':
     'Price chart with moving averages and past buy and sell signals',
   'bot.legendPrice': 'Price',
@@ -698,6 +698,60 @@ const en: Record<keyof typeof vi, string> = {
   'reason.maHold': 'No signal',
   'reason.maWarmup': 'Waiting for {days} days of prices',
   'reason.maLine': '{days}-day average',
+  // Backtester
+  'backtest.title': 'Backtest',
+  'backtest.intro':
+    'Replays this bot over past prices, one day at a time, with virtual money, and compares it with simply holding the stock and with the S&P 500 (SPY).',
+  'backtest.riskLine': 'Risks {percent}% per trade',
+  'backtest.editBot': 'Edit bot settings',
+  'backtest.range': 'Period',
+  'backtest.range1y': '1 year',
+  'backtest.range3y': '3 years',
+  'backtest.range5y': '5 years',
+  'backtest.range10y': '10 years',
+  'backtest.rangeMax': 'Max',
+  'backtest.rangeCustom': 'Custom',
+  'backtest.from': 'From',
+  'backtest.to': 'To',
+  'backtest.balance': 'Starting balance ($)',
+  'backtest.run': 'Run backtest',
+  'backtest.errorRange': 'The start date must be before the end date.',
+  'backtest.errorBalance': 'The starting balance can be {min} to {max}.',
+  'backtest.errorDates': 'Enter dates like 2020-01-15.',
+  'backtest.noData': 'There aren’t enough prices for this period.',
+  'backtest.downloadError':
+    'Couldn’t download prices. Check your connection and try again.',
+  'backtest.period': '{from} to {to} · {days} trading days',
+  'backtest.startedLater':
+    'Starts on {date}, the first day with prices for both {symbol} and SPY.',
+  'backtest.startedLaterOne':
+    'Starts on {date}, the first day with prices for {symbol}.',
+  'backtest.noBenchmark':
+    'SPY prices couldn’t load, so there’s no index comparison.',
+  'backtest.colBot': 'This bot',
+  'backtest.colHold': 'Hold {symbol}',
+  'backtest.rowReturn': 'Total return',
+  'backtest.rowAnnual': 'Per year',
+  'backtest.rowDrawdown': 'Worst drop',
+  'backtest.rowFinal': 'Final value',
+  'backtest.tradeStats':
+    'Trades: {closed} closed, {open} still open. Win rate: {winRate}. In the market {exposure} of days.',
+  'backtest.equityTitle': 'Account value',
+  'backtest.equityLabel':
+    'Account value over time for the bot, for holding the stock, and for SPY',
+  'backtest.priceTitle': 'Price and trades',
+  'backtest.priceLabel':
+    'Price chart with the moving averages and the bot’s buys and sells',
+  'backtest.legendBuy': 'Buy',
+  'backtest.legendSell': 'Sell',
+  'backtest.tradesTitle': 'Trades',
+  'backtest.noTrades': 'The bot never bought in this period.',
+  'backtest.tradeOpen': 'still open',
+  'backtest.showAll': 'Show all {count}',
+  'backtest.assumptions':
+    'Hypothetical results from past prices. Trades fill at each day’s closing price, dividends are reinvested on all three lines, and cash earns nothing. No fees, spreads or taxes yet. Past results don’t predict future ones.',
+  'bot.saveAndBacktest': 'Save and backtest',
+  'reason.dividendReinvest': 'Reinvested a dividend of {total}',
 };
 
 export default en;

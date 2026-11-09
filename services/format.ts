@@ -37,6 +37,19 @@ export const formatMoney = (
   return signed && amount > 0 ? `+${text}` : text;
 };
 
+// Short money for chart axes: $7,324.23, $45.5K, $1.25M.
+export const formatMoneyShort = (value: number) => {
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '-' : '';
+  if (abs >= 1e6) {
+    return `${sign}$${(abs / 1e6).toFixed(2)}M`;
+  }
+  if (abs >= 1e4) {
+    return `${sign}$${(abs / 1e3).toFixed(1)}K`;
+  }
+  return formatMoney(value);
+};
+
 // Index levels (S&P 500, Nikkei...) are points, not money.
 export const formatPoints = (value: number) =>
   value.toLocaleString('en-US', {

@@ -101,6 +101,8 @@ export const describeReason = (reason: TradeReason, t: Translate) => {
       return t('reason.maWarmup', params);
     case 'maLine':
       return t('reason.maLine', params);
+    case 'dividendReinvest':
+      return t('reason.dividendReinvest', {total: money('total')});
     default:
       return reason.code; // a code from a newer version of the app
   }

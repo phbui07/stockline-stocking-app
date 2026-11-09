@@ -46,7 +46,13 @@ export interface Position {
 export type TradeSide = 'BUY' | 'SELL';
 
 // Who placed a trade: you, or one of the automations.
-export type TradeSource = 'manual' | 'recurring' | 'risk' | 'bot' | 'rebalance';
+export type TradeSource =
+  | 'manual'
+  | 'recurring'
+  | 'risk'
+  | 'bot'
+  | 'rebalance'
+  | 'dividend'; // a dividend reinvested in more shares (backtests)
 
 // Why an automated trade happened, stored as a code plus the numbers it
 // mentions, e.g. {code: 'trailingStop', params: {percent: 8}}. Screens turn

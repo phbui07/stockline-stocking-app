@@ -153,16 +153,22 @@ const BotEdit = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history, settingsKey, strategyValid]);
 
-  const save = () => {
+  // Saves, then either returns to the list or opens the backtester.
+  const save = (thenBacktest = false) => {
     if (errors.length || !tradable) {
       return;
     }
+    let id = existing?.id;
     if (existing) {
       editBot(existing.id, input);
     } else {
-      addBot(input);
+      id = addBot(input).id;
     }
-    navigation.goBack();
+    if (thenBacktest) {
+      navigation.replace('Backtest', {botId: id});
+    } else {
+      navigation.goBack();
+    }
   };
 
   const confirmDelete = () =>
@@ -354,15 +360,26 @@ const BotEdit = () => {
         <SimulatedBanner detail={t('bot.notLive')} />
 
         <TouchableOpacity
-          testID="bot-save"
+          testID="bot-save-backtest"
           disabled={errors.length > 0 || !tradable}
           style={[
             styles.saveBtn,
             centerAll,
             (errors.length > 0 || !tradable) && styles.saveDisabled,
           ]}
-          onPress={save}>
-          <Text style={styles.saveText}>{t('common.save')}</Text>
+          onPress={() => save(true)}>
+          <Text style={styles.saveText}>{t('bot.saveAndBacktest')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          testID="bot-save"
+          disabled={errors.length > 0 || !tradable}
+          style={[
+            styles.secondaryBtn,
+            centerAll,
+            (errors.length > 0 || !tradable) && styles.secondaryDisabled,
+          ]}
+          onPress={() => save()}>
+          <Text style={styles.secondaryText}>{t('common.save')}</Text>
         </TouchableOpacity>
         {existing ? (
           <TouchableOpacity
@@ -690,6 +707,19 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     fontWeight: '600',
     fontSize: 15,
+  },
+  secondaryBtn: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#76787E',
+    paddingVertical: vh(1.5),
+  },
+  secondaryDisabled: {
+    opacity: 0.4,
+  },
+  secondaryText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   deleteBtn: {
     borderRadius: 16,

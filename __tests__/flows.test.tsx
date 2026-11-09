@@ -19,10 +19,14 @@ import {getPriceProvider, setPriceProvider} from '../services/data';
 import {MockPriceProvider} from '../services/data/mockProvider';
 import {
   addDays,
+  addMonths,
   dayOfWeek,
   isWeekday,
   lastCompletedMarketDate,
 } from '../services/engine/dates';
+import {runBacktest} from '../services/engine/backtest';
+import {maCrossover} from '../services/engine/strategies/maCrossover';
+import {formatPercent} from '../services/format';
 
 // Charts start Animated timers on mount that outlive the test file; the
 // flows don't exercise charts, so render them as nothing.
@@ -696,6 +700,90 @@ describe('strategy bots', () => {
       (await AsyncStorage.getItem(`stockline.automation.${DEMO.email}`))!,
     );
     expect(automation.bots).toEqual([]);
+  }, 20000);
+
+  it('backtests a bot and shows the same numbers the engine computes', async () => {
+    const aapl = wavyHistory();
+    // SPY rises steadily over the same days.
+    const spy = {
+      dates: aapl.dates,
+      closes: aapl.dates.map((_, i) => 400 + i / 2),
+    };
+    setPriceProvider(new MockPriceProvider({AAPL: aapl, SPY: spy}));
+    prices.AAPL = 100;
+    await startLoggedIn();
+    await fireEvent.press(screen.getByTestId('home-automate'));
+    await fireEvent.press(await screen.findByTestId('bot-add'));
+    await fireEvent.press(await screen.findByTestId('search-result-AAPL'));
+    await fireEvent.press(await screen.findByTestId('bot-mode-price'));
+    await fireEvent.changeText(screen.getByTestId('bot-slow'), '20');
+    await fireEvent.press(screen.getByTestId('bot-save-backtest'));
+
+    // A custom period with a bad date is caught before running.
+    await fireEvent.press(await screen.findByTestId('backtest-range-custom'));
+    await fireEvent.changeText(
+      screen.getByTestId('backtest-from'),
+      '2026-13-01',
+    );
+    await fireEvent.press(screen.getByTestId('backtest-run'));
+    expect(screen.getByTestId('backtest-error')).toHaveTextContent(
+      'Nhập ngày dạng 2020-01-15.',
+    );
+
+    await fireEvent.press(screen.getByTestId('backtest-range-1y'));
+    // The run finishes after a short pause (so the spinner can show). Press
+    // and wait inside one act() so React applies the results as they land.
+    await act(async () => {
+      await fireEvent.press(screen.getByTestId('backtest-run'));
+      await new Promise<void>(resolve => setTimeout(resolve, 300));
+    });
+    expect(screen.getByTestId('backtest-results')).toBeOnTheScreen();
+
+    // The same backtest straight from the engine.
+    const to = lastCompletedMarketDate();
+    const from = addMonths(to, -12);
+    const toHistory = (symbol: string, series: typeof aapl) => ({
+      symbol,
+      bars: series.dates.map((date, i) => ({
+        date,
+        close: series.closes[i],
+        adjClose: series.closes[i],
+      })),
+      splits: [],
+      dividends: [],
+    });
+    const expected = runBacktest({
+      bot: {
+        symbol: 'AAPL',
+        name: 'AAPL Corp',
+        strategy: 'maCross',
+        settings: {...maCrossover.defaults, mode: 'price', slowLength: 20},
+        exits: {},
+        riskPercent: 100,
+      },
+      history: toHistory('AAPL', aapl),
+      benchmark: toHistory('SPY', spy),
+      from,
+      to,
+      startingBalance: 10000,
+    })!;
+    expect(
+      screen.getByTestId('backtest-backtest.rowReturn-Bot này'),
+    ).toHaveTextContent(formatPercent(expected.stats.strategy.totalReturn));
+    expect(
+      screen.getByTestId('backtest-backtest.rowReturn-SPY'),
+    ).toHaveTextContent(formatPercent(expected.stats.benchmark!.totalReturn));
+    expect(
+      screen.getByTestId('backtest-backtest.rowDrawdown-Giữ AAPL'),
+    ).toHaveTextContent(
+      formatPercent(expected.stats.buyHold.maxDrawdown.percent),
+    );
+    expect(screen.getByTestId('backtest-trade-stats')).toHaveTextContent(
+      new RegExp(`^Giao dịch: ${expected.stats.closedTrades} đã đóng`),
+    );
+    expect(screen.getAllByTestId('backtest-trade').length).toBe(
+      Math.min(10, expected.trades.length),
+    );
   }, 20000);
 });
 

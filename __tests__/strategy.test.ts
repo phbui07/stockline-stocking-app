@@ -176,20 +176,28 @@ describe('signalHistory', () => {
   });
 
   it('never shows the strategy a price from after the day it decides', () => {
-    const lengths: number[] = [];
+    // Each call records the last day it was shown and how many days.
+    const seen: [string, number][] = [];
     const spy: Strategy<null> = {
       id: 'spy',
       defaults: null,
       validate: () => [],
-      warmupBars: () => 1,
+      warmupBars: () => 2,
       decide: history => {
-        lengths.push(history.length);
+        seen.push([history[history.length - 1].date, history.length]);
         return {action: 'HOLD', reason: {code: 'test'}};
       },
       indicators: () => [],
     };
-    signalHistory(spy, null, bars([1, 2, 3, 4]));
-    expect(lengths).toEqual([1, 2, 3, 4]); // day i sees i bars, never more
+    const prices = bars([1, 2, 3, 4]);
+    signalHistory(spy, null, prices);
+    // From day 2 (index 1) on, each call ends on its own day and holds the
+    // 2-day warm-up: never a later day.
+    expect(seen).toEqual([
+      [prices[1].date, 2],
+      [prices[2].date, 2],
+      [prices[3].date, 2],
+    ]);
 
     // Two histories that only differ after day 4 give the same signals up
     // to day 4.

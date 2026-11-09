@@ -141,9 +141,15 @@ const MultiLineChart: React.FC<MultiLineChartProps> = ({
           })}
         </Svg>
         <View style={[styles.axis, {height}]}>
-          <Text style={styles.axisText}>{formatValue(top)}</Text>
-          <Text style={styles.axisText}>{formatValue((top + bottom) / 2)}</Text>
-          <Text style={styles.axisText}>{formatValue(bottom)}</Text>
+          <Text style={styles.axisText} numberOfLines={1} adjustsFontSizeToFit>
+            {formatValue(top)}
+          </Text>
+          <Text style={styles.axisText} numberOfLines={1} adjustsFontSizeToFit>
+            {formatValue((top + bottom) / 2)}
+          </Text>
+          <Text style={styles.axisText} numberOfLines={1} adjustsFontSizeToFit>
+            {formatValue(bottom)}
+          </Text>
         </View>
       </View>
       {startLabel || endLabel ? (

@@ -614,7 +614,7 @@ const vi = {
   // Strategy bots
   'bot.title': 'Bot chiến lược',
   'bot.hubExplain':
-    'Bot làm theo một quy tắc giao dịch trên một cổ phiếu. Hãy thiết lập và xem các tín hiệu của nó trong năm qua. Bot chưa giao dịch: bước tiếp theo là thử nó trên giá quá khứ.',
+    'Bot làm theo một quy tắc giao dịch trên một cổ phiếu. Hãy thiết lập, xem các tín hiệu của nó và kiểm thử nó trên giá quá khứ. Bot chưa giao dịch trong danh mục của bạn.',
   'bot.empty': 'Chưa có bot nào.',
   'bot.newTitle': 'Bot chiến lược mới',
   'bot.editTitle': 'Sửa bot chiến lược',
@@ -659,7 +659,7 @@ const vi = {
     'Biểu đồ chỉ cho thấy nơi quy tắc sẽ mua và bán, theo giá đóng cửa. Tiền, quy mô vị thế và điểm thoát sẽ có trong phần kiểm thử quá khứ.',
   'bot.lastSignal': 'Tín hiệu gần nhất ({date}): {reason}',
   'bot.notLive':
-    'Bot chưa giao dịch. Bạn sẽ có thể thử nó trên giá quá khứ, rồi chạy bằng tiền ảo.',
+    'Bot chưa giao dịch trong danh mục của bạn. Hãy kiểm thử nó trên giá quá khứ trước; chạy bot tiếp theo bằng tiền ảo sẽ có sau.',
   'bot.chartLabel':
     'Biểu đồ giá với các đường trung bình động và tín hiệu mua bán trong quá khứ',
   'bot.legendPrice': 'Giá',
@@ -695,6 +695,60 @@ const vi = {
   'reason.maHold': 'Không có tín hiệu',
   'reason.maWarmup': 'Đang chờ đủ {days} ngày giá',
   'reason.maLine': 'Trung bình {days} ngày',
+  // Backtester
+  'backtest.title': 'Kiểm thử quá khứ',
+  'backtest.intro':
+    'Chạy lại bot này trên giá quá khứ, từng ngày một, bằng tiền ảo, rồi so sánh với việc chỉ giữ cổ phiếu và với chỉ số S&P 500 (SPY).',
+  'backtest.riskLine': 'Rủi ro {percent}% mỗi lệnh',
+  'backtest.editBot': 'Sửa thiết lập bot',
+  'backtest.range': 'Khoảng thời gian',
+  'backtest.range1y': '1 năm',
+  'backtest.range3y': '3 năm',
+  'backtest.range5y': '5 năm',
+  'backtest.range10y': '10 năm',
+  'backtest.rangeMax': 'Tối đa',
+  'backtest.rangeCustom': 'Tùy chọn',
+  'backtest.from': 'Từ ngày',
+  'backtest.to': 'Đến ngày',
+  'backtest.balance': 'Số dư ban đầu ($)',
+  'backtest.run': 'Chạy kiểm thử',
+  'backtest.errorRange': 'Ngày bắt đầu phải trước ngày kết thúc.',
+  'backtest.errorBalance': 'Số dư ban đầu từ {min} đến {max}.',
+  'backtest.errorDates': 'Nhập ngày dạng 2020-01-15.',
+  'backtest.noData': 'Không đủ dữ liệu giá cho khoảng thời gian này.',
+  'backtest.downloadError':
+    'Không tải được giá. Hãy kiểm tra kết nối và thử lại.',
+  'backtest.period': 'Từ {from} đến {to} · {days} phiên giao dịch',
+  'backtest.startedLater':
+    'Bắt đầu từ {date}, ngày đầu tiên có giá của cả {symbol} và SPY.',
+  'backtest.startedLaterOne':
+    'Bắt đầu từ {date}, ngày đầu tiên có giá của {symbol}.',
+  'backtest.noBenchmark':
+    'Không tải được giá SPY nên không có so sánh với chỉ số.',
+  'backtest.colBot': 'Bot này',
+  'backtest.colHold': 'Giữ {symbol}',
+  'backtest.rowReturn': 'Tổng lợi nhuận',
+  'backtest.rowAnnual': 'Mỗi năm',
+  'backtest.rowDrawdown': 'Mức giảm sâu nhất',
+  'backtest.rowFinal': 'Giá trị cuối',
+  'backtest.tradeStats':
+    'Giao dịch: {closed} đã đóng, {open} đang mở. Tỷ lệ thắng: {winRate}. Thời gian nắm giữ: {exposure} số ngày.',
+  'backtest.equityTitle': 'Giá trị tài khoản',
+  'backtest.equityLabel':
+    'Giá trị tài khoản theo thời gian của bot, của việc giữ cổ phiếu và của SPY',
+  'backtest.priceTitle': 'Giá và các giao dịch',
+  'backtest.priceLabel':
+    'Biểu đồ giá với các đường trung bình và các lần mua bán của bot',
+  'backtest.legendBuy': 'Mua',
+  'backtest.legendSell': 'Bán',
+  'backtest.tradesTitle': 'Các giao dịch',
+  'backtest.noTrades': 'Bot không mua lần nào trong khoảng thời gian này.',
+  'backtest.tradeOpen': 'đang giữ',
+  'backtest.showAll': 'Xem tất cả {count}',
+  'backtest.assumptions':
+    'Kết quả giả định dựa trên giá quá khứ. Lệnh khớp ở giá đóng cửa mỗi ngày, cổ tức được tái đầu tư ở cả ba đường, và tiền mặt không sinh lãi. Chưa tính phí, chênh lệch giá hay thuế. Kết quả quá khứ không dự báo tương lai.',
+  'bot.saveAndBacktest': 'Lưu và kiểm thử',
+  'reason.dividendReinvest': 'Tái đầu tư cổ tức {total}',
 };
 
 export default vi;

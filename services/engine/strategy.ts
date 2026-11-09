@@ -35,9 +35,10 @@ export interface Strategy<S> {
   defaults: S;
   // Problems with the settings, as codes the screens translate.
   validate: (settings: S) => string[];
-  // How many days of prices it needs before it can decide anything.
+  // How many days of prices it needs to decide: the longest lookback it uses.
   warmupBars: (settings: S) => number;
-  // `history` ends today: history[history.length - 1] is today's bar.
+  // `history` ends today: history[history.length - 1] is today's bar. It
+  // holds at most warmupBars days (see historyUpTo).
   // `holding` says whether the strategy already owns the stock.
   decide: (
     history: readonly PriceBar[],
@@ -46,3 +47,10 @@ export interface Strategy<S> {
   ) => Decision;
   indicators: (closes: number[], settings: S) => IndicatorLine[];
 }
+
+// What a strategy is shown on day i: the last `warmup` days up to and
+// including day i, never a later one. Older days are left out because the
+// strategy doesn't need them, and copying the whole history every day would
+// make a 25-year backtest slow on a phone.
+export const historyUpTo = <T>(bars: readonly T[], i: number, warmup: number) =>
+  bars.slice(Math.max(0, i + 1 - warmup), i + 1);
