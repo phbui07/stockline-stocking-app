@@ -749,9 +749,62 @@ const en: Record<keyof typeof vi, string> = {
   'backtest.tradeOpen': 'still open',
   'backtest.showAll': 'Show all {count}',
   'backtest.assumptions':
-    'Hypothetical results from past prices. Trades fill at each day’s closing price, dividends are reinvested on all three lines, and cash earns nothing. No fees, spreads or taxes yet. Past results don’t predict future ones.',
+    'Hypothetical results from past prices. Trades fill at each day’s closing price, dividends are reinvested on all three lines, and cash earns nothing. With costs, every bot trade pays the spread and each sale sets aside estimated tax on gains from shares held a year or less; holding the stock and SPY pay the spread once, when they buy. Shares still held at the end are valued at the last close. Past results don’t predict future ones.',
   'bot.saveAndBacktest': 'Save and backtest',
   'reason.dividendReinvest': 'Reinvested a dividend of {total}',
+  // Costs (Phase 5)
+  'costs.title': 'Costs and taxes',
+  'costs.intro':
+    'Real trades cost more than the price you see. Set these to see how much that changes a strategy’s results.',
+  'costs.spread': 'Spread and slippage per trade (%)',
+  'costs.spreadHint':
+    'Each buy fills this much above the price and each sale this much below. Large US stocks and ETFs usually cost about 0.01–0.05%; small or rarely traded stocks cost more.',
+  'costs.spreadExample': 'On a {amount} trade: {cost}',
+  'costs.tax': 'Tax on short-term gains (%)',
+  'costs.taxHint':
+    'In the US, gains on shares held a year or less are taxed like income: 10–37% federal, plus any state tax. Gains and losses in the same year net out, and a net loss carries over to later years. Shares held longer aren’t taxed here.',
+  'costs.taxExample': 'On a {amount} short-term gain: {cost}',
+  'costs.apply': 'Apply to my practice trades',
+  'costs.applyHint':
+    'Your own trades, recurring buys and risk-rule sales pay the spread, and sales set aside the estimated tax from your cash. Backtests always show results with and without costs.',
+  'costs.notAdvice':
+    'Estimates for learning only, not tax advice. Your real rate depends on your income and where you live.',
+  'costs.errorSpread': 'Spread must be between {min}% and {max}%.',
+  'costs.errorTax': 'Tax must be between {min}% and {max}%.',
+  'costs.summary':
+    'Spread {spread}% per trade · tax {tax}% on short-term gains',
+  'costs.summaryNone': 'No spread or tax',
+  'costs.tradesOn': 'Your practice trades pay these.',
+  'costs.tradesOff': 'Only backtests use these; your practice trades don’t.',
+  'costs.hubExplain':
+    'Spread and estimated tax, used by backtests and, if you choose, your practice trades.',
+  'backtest.costsLine':
+    'Costs: spread {spread}% per trade, tax {tax}% on short-term gains.',
+  'backtest.costsNone': 'Costs: none. Set a spread or tax to compare.',
+  'backtest.editCosts': 'Change costs',
+  'backtest.afterCosts':
+    'These results include costs. The comparison is below.',
+  'backtest.compareTitle': 'With and without costs',
+  'backtest.colWithout': 'Without costs',
+  'backtest.colWith': 'With costs',
+  'backtest.costsPaid':
+    'The bot paid {spread} in spread on {trades} trades and set aside {tax} in estimated tax.',
+  'backtest.costsLower': 'With costs, its final value is {amount} lower.',
+  'backtest.costsHigher':
+    'With costs, its final value is {amount} higher: tax set aside after a gain kept less money invested before a loss.',
+  'backtest.legendBeforeCosts': 'This bot, before costs',
+  'backtest.tradeSpread': 'Spread {amount}',
+  'backtest.tradeTax': 'tax {amount}',
+  'backtest.tradeTaxBack': 'tax given back {amount}',
+  'order.spread': 'Spread ({percent}%)',
+  'order.estimatedTax': 'Estimated tax ({percent}%)',
+  'order.taxBack': 'Tax given back',
+  'order.confirmCosts': 'Spread: {spread} · Estimated tax: {tax}',
+  'order.costsOn':
+    'Costs are on: trades pay a {spread}% spread and sales set aside {tax}% tax on short-term gains.',
+  'trade.spread': 'Spread:',
+  'trade.tax': 'Estimated tax:',
+  'trade.taxBack': 'Tax given back:',
 };
 
 export default en;

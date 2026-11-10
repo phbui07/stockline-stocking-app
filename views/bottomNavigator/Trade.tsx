@@ -347,6 +347,24 @@ const TransactionCard: React.FC<{transaction: Transaction}> = ({
             {formatMoney(transaction.total)}
           </Text>
         </View>
+        {transaction.fees ? (
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>{t('trade.spread')}</Text>
+            <Text style={styles.detailValue}>
+              {formatMoney(transaction.fees, {cents: true})}
+            </Text>
+          </View>
+        ) : null}
+        {transaction.tax ? (
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>
+              {t(transaction.tax > 0 ? 'trade.tax' : 'trade.taxBack')}
+            </Text>
+            <Text style={styles.detailValue}>
+              {formatMoney(Math.abs(transaction.tax), {cents: true})}
+            </Text>
+          </View>
+        ) : null}
         {transaction.realizedPnL !== undefined ? (
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>{t('trade.pnl')}</Text>

@@ -9,6 +9,7 @@ Research notes from October 2026 on the legal limits that apply to Stockline's A
 - **No personal data to the AI.** Only public market data is sent to Google. Portfolio facts ("this stock is 12% of your portfolio") are calculated on the phone and never sent.
 - **Neutral indicator statistics.** Each indicator shows its sample size, date range and the base rate for all days, with a hypothetical-results caveat and a warning when there are fewer than 50 cases. The indicator statistics never call anything a "signal", and nothing sends alerts based on indicators.
 - **Automations are rules you set yourself.** Recurring investments, risk rules and strategy bots only do what you configure, with virtual money. The app suggests no stocks and no settings: the inputs are empty, or use textbook defaults such as 20/50-day averages.
+- **Tax figures are estimates at a rate the user sets.** The Costs screen says they're for learning only and not tax advice, and the app never suggests what anyone's rate is. The 24% default is a common US bracket, labeled as an example.
 - **Strategy bot signals are historical.** The bot setup screen marks where *your* rule would have bought and sold over the past year. For the latest close it states facts ("the 20-day average was 3.8% below the 50-day") and never says "buy now". There are no alerts or notifications for signals. Every automation screen shows "Simulated with virtual money. For education only, not investment advice."
 - **Virtual money only.** There are no real orders and no brokerage connection.
 
@@ -64,3 +65,4 @@ Research notes from October 2026 on the legal limits that apply to Stockline's A
     - Ask the lawyer specifically whether showing buy/sell signals from a rule the user builds counts as a "recommendation". The ITP case above involved published technical analysis with buy/sell calls.
     - Keep signals historical, user-configured and alert-free unless the lawyer says otherwise.
     - Label backtest results as hypothetical (see the SEC Marketing Rule note).
+11. **Tax estimates.** The short-term tax model follows US rules (netting within the year, losses carried forward). Vietnam taxes share sales differently: a flat percentage of each sale's value, not the gain. Before publishing there, consider a Vietnamese tax option, or label the US model clearly as US-only.

@@ -13,6 +13,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {centerAll, container, vh, vw} from '../../services/styleSheet';
 import {useAutomation} from '../../services/automation';
+import {useUserData} from '../../services/userData';
 import {DailyHistory, getDailyHistory} from '../../services/data';
 import {TKey, useI18n} from '../../services/i18n';
 import {
@@ -40,6 +41,7 @@ import {
   validateBacktest,
 } from '../../services/engine/backtest';
 import {getStrategy} from '../../services/engine/strategies';
+import {CostSettings, hasCosts} from '../../services/engine/costs';
 import {
   describeReason,
   describeStrategy,
@@ -61,7 +63,12 @@ const RANGES: {key: Range; label: TKey; years?: number}[] = [
 // "Max" asks for everything since 1980; the data starts at the listing.
 const EARLIEST = '1980-01-01';
 const BENCHMARK = 'SPY';
-const COLORS = {bot: '#FFED4B', hold: '#4DA3FF', index: '#B0B0B0'};
+const COLORS = {
+  bot: '#FFED4B',
+  botBeforeCosts: 'rgba(255, 237, 75, 0.45)',
+  hold: '#4DA3FF',
+  index: '#B0B0B0',
+};
 const LINE_COLORS: Record<string, string> = {
   fast: '#4DA3FF',
   slow: '#FFB020',
@@ -78,6 +85,13 @@ const FAILURE_KEYS: Record<Failure, TKey> = {
   download: 'backtest.downloadError',
 };
 
+// A run's results: without costs, and with them if any are set.
+interface Outcome {
+  gross: BacktestResult;
+  net?: BacktestResult;
+  costs: CostSettings;
+}
+
 // Backtests a saved bot (route params {botId}) over a period you choose.
 const Backtest = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
@@ -85,6 +99,8 @@ const Backtest = () => {
   const {t, lang} = useI18n();
   const {data} = useAutomation();
   const bot = data.bots.find(item => item.id === botId);
+  const {spreadPercent, taxPercent} = useUserData().data.settings.costs;
+  const costs: CostSettings = {spreadPercent, taxPercent};
 
   const [range, setRange] = useState<Range>('5y');
   const [fromText, setFromText] = useState('');
@@ -92,7 +108,7 @@ const Backtest = () => {
   const [balanceText, setBalanceText] = useState('10000');
   const [running, setRunning] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
-  const [result, setResult] = useState<BacktestResult | null>(null);
+  const [result, setResult] = useState<Outcome | null>(null);
   const [hasBenchmark, setHasBenchmark] = useState(true);
 
   if (!bot) {
@@ -154,17 +170,20 @@ const Backtest = () => {
         : benchmark ?? undefined;
       // Let the "Running…" state paint before the (synchronous) replay.
       await new Promise<void>(resolve => setTimeout(() => resolve(), 30));
-      const outcome = runBacktest({
+      const input = {
         bot,
         history,
         benchmark: index,
         from: dates.from,
         to: dates.to,
         startingBalance: balance,
-      });
+      };
+      // The same test twice, without and with costs, to compare them.
+      const gross = runBacktest(input);
+      const net = hasCosts(costs) ? runBacktest({...input, costs}) : null;
       setHasBenchmark(isIndex || !!index);
-      setResult(outcome);
-      setFailure(outcome ? null : 'noData');
+      setResult(gross ? {gross, net: net ?? undefined, costs} : null);
+      setFailure(gross ? null : 'noData');
     } catch {
       setFailure('download');
     } finally {
@@ -243,6 +262,16 @@ const Backtest = () => {
           onChange={value => setBalanceText(cleanDecimalInput(value, 2))}
           decimal
         />
+        <Text testID="backtest-costs" style={styles.grey}>
+          {hasCosts(costs)
+            ? t('backtest.costsLine', {spread: spreadPercent, tax: taxPercent})
+            : t('backtest.costsNone')}
+        </Text>
+        <TouchableOpacity
+          testID="backtest-costs-edit"
+          onPress={() => navigation.navigate('Costs')}>
+          <Text style={styles.link}>{t('backtest.editCosts')}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           testID="backtest-run"
@@ -266,7 +295,8 @@ const Backtest = () => {
 
         {result ? (
           <Results
-            result={result}
+            result={result.net ?? result.gross}
+            gross={result.net ? result.gross : undefined}
             symbol={bot.symbol}
             hasBenchmark={hasBenchmark}
             lang={lang}
@@ -280,12 +310,15 @@ const Backtest = () => {
   );
 };
 
+// `result` is what the table, charts and trades show: with costs, if any
+// are set. `gross` is the same test without costs, for the comparison.
 const Results: React.FC<{
   result: BacktestResult;
+  gross?: BacktestResult;
   symbol: string;
   hasBenchmark: boolean;
   lang: 'vi' | 'en';
-}> = ({result, symbol, hasBenchmark, lang}) => {
+}> = ({result, gross, symbol, hasBenchmark, lang}) => {
   const {t} = useI18n();
   const [showAll, setShowAll] = useState(false);
   const {stats, dates} = result;
@@ -344,6 +377,9 @@ const Results: React.FC<{
       {!hasBenchmark ? (
         <Text style={styles.warning}>{t('backtest.noBenchmark')}</Text>
       ) : null}
+      {gross ? (
+        <Text style={styles.grey}>{t('backtest.afterCosts')}</Text>
+      ) : null}
 
       <View style={styles.table}>
         <View style={styles.tableRow}>
@@ -387,6 +423,9 @@ const Results: React.FC<{
           exposure: formatPercent(stats.exposure, false),
         })}
       </Text>
+      {gross ? (
+        <CostsCompare gross={gross} net={result} symbol={symbol} />
+      ) : null}
 
       <Text style={styles.sectionTitle}>{t('backtest.equityTitle')}</Text>
       <View style={styles.chartCard}>
@@ -399,6 +438,16 @@ const Results: React.FC<{
               dashed: true,
             },
             {key: 'hold', values: result.buyHold, color: COLORS.hold},
+            ...(gross
+              ? [
+                  {
+                    key: 'botBeforeCosts',
+                    values: gross.equity,
+                    color: COLORS.botBeforeCosts,
+                    dashed: true,
+                  },
+                ]
+              : []),
             {key: 'bot', values: result.equity, color: COLORS.bot, width: 2},
           ]}
           width={vw(90) - vw(6)}
@@ -410,6 +459,12 @@ const Results: React.FC<{
         />
         <View style={styles.legend}>
           <Legend color={COLORS.bot} label={t('backtest.colBot')} />
+          {gross ? (
+            <Legend
+              color={COLORS.botBeforeCosts}
+              label={t('backtest.legendBeforeCosts')}
+            />
+          ) : null}
           <Legend color={COLORS.hold} label={t('backtest.colHold', {symbol})} />
           {result.benchmark ? (
             <Legend color={COLORS.index} label={BENCHMARK} />
@@ -507,6 +562,118 @@ const TradeRow: React.FC<{trade: BacktestTrade; lang: 'vi' | 'en'}> = ({
       {trade.exitReason ? (
         <Text style={styles.grey}>{describeReason(trade.exitReason, t)}</Text>
       ) : null}
+      {trade.fees || trade.tax ? (
+        <Text style={styles.grey}>
+          {[
+            trade.fees
+              ? t('backtest.tradeSpread', {
+                  amount: formatMoney(trade.fees, {cents: true}),
+                })
+              : null,
+            trade.tax
+              ? t(
+                  trade.tax > 0 ? 'backtest.tradeTax' : 'backtest.tradeTaxBack',
+                  {
+                    amount: formatMoney(Math.abs(trade.tax), {cents: true}),
+                  },
+                )
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
+      ) : null}
+    </View>
+  );
+};
+
+// The same test without and with costs, side by side.
+const CostsCompare: React.FC<{
+  gross: BacktestResult;
+  net: BacktestResult;
+  symbol: string;
+}> = ({gross, net, symbol}) => {
+  const {t} = useI18n();
+  const lines: {
+    key: string;
+    label: string;
+    gross?: LineStats;
+    net?: LineStats;
+  }[] = [
+    {
+      key: 'bot',
+      label: t('backtest.colBot'),
+      gross: gross.stats.strategy,
+      net: net.stats.strategy,
+    },
+    {
+      key: 'hold',
+      label: t('backtest.colHold', {symbol}),
+      gross: gross.stats.buyHold,
+      net: net.stats.buyHold,
+    },
+    {
+      key: 'index',
+      label: BENCHMARK,
+      gross: gross.stats.benchmark,
+      net: net.stats.benchmark,
+    },
+  ];
+  const cell = (line?: LineStats) =>
+    line ? (
+      <View style={styles.compareCell}>
+        <Text style={styles.compareValue}>{formatMoney(line.finalValue)}</Text>
+        <Text
+          style={[
+            styles.compareReturn,
+            {color: changeColor(line.totalReturn)},
+          ]}>
+          {formatPercent(line.totalReturn)}
+        </Text>
+      </View>
+    ) : null;
+  // Costs usually lower the final value. They can raise it a little: tax set
+  // aside after a gain isn't invested, so a following loss is smaller.
+  const difference =
+    gross.stats.strategy.finalValue - net.stats.strategy.finalValue;
+  const trades = net.transactions.filter(tx => tx.source !== 'dividend').length;
+
+  return (
+    <View testID="backtest-compare" style={styles.table}>
+      <Text style={styles.tableHead}>{t('backtest.compareTitle')}</Text>
+      <View style={styles.tableRow}>
+        <Text style={styles.tableLabel} />
+        <Text style={[styles.tableCell, styles.tableHead]}>
+          {t('backtest.colWithout')}
+        </Text>
+        <Text style={[styles.tableCell, styles.tableHead]}>
+          {t('backtest.colWith')}
+        </Text>
+      </View>
+      {lines
+        .filter(line => line.gross && line.net)
+        .map(line => (
+          <View
+            key={line.key}
+            testID={`backtest-compare-${line.key}`}
+            style={styles.tableRow}>
+            <Text style={styles.tableLabel} numberOfLines={2}>
+              {line.label}
+            </Text>
+            {cell(line.gross)}
+            {cell(line.net)}
+          </View>
+        ))}
+      <Text testID="backtest-costs-paid" style={styles.explain}>
+        {t('backtest.costsPaid', {
+          spread: formatMoney(net.stats.spreadPaid, {cents: true}),
+          trades,
+          tax: formatMoney(net.stats.taxPaid, {cents: true}),
+        })}{' '}
+        {t(difference >= 0 ? 'backtest.costsLower' : 'backtest.costsHigher', {
+          amount: formatMoney(Math.abs(difference), {cents: true}),
+        })}
+      </Text>
     </View>
   );
 };
@@ -682,6 +849,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     textAlign: 'right',
+  },
+  compareCell: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  compareValue: {
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  compareReturn: {
+    fontSize: 12,
   },
   chartCard: {
     backgroundColor: '#232323',

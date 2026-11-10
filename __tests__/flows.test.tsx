@@ -26,7 +26,7 @@ import {
 } from '../services/engine/dates';
 import {runBacktest} from '../services/engine/backtest';
 import {maCrossover} from '../services/engine/strategies/maCrossover';
-import {formatPercent} from '../services/format';
+import {formatMoney, formatPercent} from '../services/format';
 
 // Charts start Animated timers on mount that outlive the test file; the
 // flows don't exercise charts, so render them as nothing.
@@ -173,6 +173,8 @@ const fakeYahoo = (url: string, init?: RequestInit) => {
 
 // Records Alert.alert calls so tests can tap their buttons.
 const alertSpy = jest.spyOn(Alert, 'alert');
+// Makes text safe to put inside a RegExp ($ and . mean something there).
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const pressAlert = async (buttonText: string) => {
   const call = alertSpy.mock.calls[alertSpy.mock.calls.length - 1];
   const buttons = (call?.[2] ?? []) as AlertButton[];
@@ -752,12 +754,16 @@ describe('strategy bots', () => {
       splits: [],
       dividends: [],
     });
-    const expected = runBacktest({
+    const input = {
       bot: {
         symbol: 'AAPL',
         name: 'AAPL Corp',
-        strategy: 'maCross',
-        settings: {...maCrossover.defaults, mode: 'price', slowLength: 20},
+        strategy: 'maCross' as const,
+        settings: {
+          ...maCrossover.defaults,
+          mode: 'price' as const,
+          slowLength: 20,
+        },
         exits: {},
         riskPercent: 100,
       },
@@ -766,7 +772,46 @@ describe('strategy bots', () => {
       from,
       to,
       startingBalance: 10000,
+    };
+    // The results show the default costs (0.1% spread, 24% tax), with the
+    // no-cost version beside them.
+    const gross = runBacktest(input)!;
+    const expected = runBacktest({
+      ...input,
+      costs: {spreadPercent: 0.1, taxPercent: 24},
     })!;
+    expect(screen.getByTestId('backtest-costs')).toHaveTextContent(
+      'Chi phí: chênh lệch 0.1% mỗi giao dịch, thuế 24% trên lãi ngắn hạn.',
+    );
+    expect(expected.stats.spreadPaid).toBeGreaterThan(0);
+    expect(expected.stats.strategy.finalValue).toBeLessThan(
+      gross.stats.strategy.finalValue,
+    );
+    expect(screen.getByTestId('backtest-compare-bot')).toHaveTextContent(
+      [
+        'Bot này',
+        formatMoney(gross.stats.strategy.finalValue),
+        formatPercent(gross.stats.strategy.totalReturn),
+        formatMoney(expected.stats.strategy.finalValue),
+        formatPercent(expected.stats.strategy.totalReturn),
+      ].join(''),
+    );
+    expect(screen.getByTestId('backtest-costs-paid')).toHaveTextContent(
+      new RegExp(
+        `^Bot đã trả ${escape(
+          formatMoney(expected.stats.spreadPaid),
+        )} chênh lệch giá cho ${
+          expected.transactions.length
+        } giao dịch và trích ${escape(
+          formatMoney(expected.stats.taxPaid),
+        )} thuế ước tính\\. Khi có chi phí, giá trị cuối của bot thấp hơn ${escape(
+          formatMoney(
+            gross.stats.strategy.finalValue -
+              expected.stats.strategy.finalValue,
+          ),
+        )}\\.$`,
+      ),
+    );
     expect(
       screen.getByTestId('backtest-backtest.rowReturn-Bot này'),
     ).toHaveTextContent(formatPercent(expected.stats.strategy.totalReturn));
@@ -784,6 +829,68 @@ describe('strategy bots', () => {
     expect(screen.getAllByTestId('backtest-trade').length).toBe(
       Math.min(10, expected.trades.length),
     );
+  }, 20000);
+});
+
+describe('costs', () => {
+  it('saves the rates, and practice trades pay them once turned on', async () => {
+    prices.AAPL = 100;
+    await startLoggedIn();
+    await fireEvent.press(screen.getByTestId('home-automate'));
+    // Backtests use the defaults; practice trades don't pay them yet.
+    const card = await screen.findByTestId('costs-card');
+    expect(card).toHaveTextContent(
+      /^Chênh lệch 0\.1% mỗi giao dịch · thuế 24% trên lãi ngắn hạnChỉ kiểm thử/,
+    );
+
+    await fireEvent.press(card);
+    await fireEvent.changeText(screen.getByTestId('costs-tax'), '75');
+    expect(screen.getByText('Thuế phải từ 0% đến 60%.')).toBeOnTheScreen();
+    expect(screen.getByTestId('costs-save')).toBeDisabled();
+    await fireEvent.changeText(screen.getByTestId('costs-tax'), '30');
+    await fireEvent.changeText(screen.getByTestId('costs-spread'), '0.5');
+    expect(screen.getByTestId('costs-spread-example')).toHaveTextContent(
+      'Với giao dịch $1,000.00: $5.00',
+    );
+    expect(screen.getByTestId('costs-tax-example')).toHaveTextContent(
+      'Với khoản lãi ngắn hạn $1,000.00: $300.00',
+    );
+    await fireEvent(screen.getByTestId('costs-apply'), 'valueChange', true);
+    await fireEvent.press(screen.getByTestId('costs-save'));
+    expect(await screen.findByTestId('costs-card')).toHaveTextContent(
+      /^Chênh lệch 0\.5% mỗi giao dịch · thuế 30% trên lãi ngắn hạnCác giao dịch ảo của bạn có tính/,
+    );
+
+    // A buy of 2 shares at $100 now pays a 0.5% spread: $1.00.
+    await fireEvent.press(screen.getByLabelText('Quay lại'));
+    await openStock('AAPL');
+    await fireEvent.press(screen.getByTestId('detail-buy'));
+    await fireEvent.changeText(
+      await screen.findByTestId('order-quantity'),
+      '2',
+    );
+    expect(screen.getByText('Chênh lệch giá (0.5%)')).toBeOnTheScreen();
+    expect(screen.getByText('$99,799.00')).toBeOnTheScreen(); // cash after
+    await fireEvent.press(screen.getByTestId('order-place'));
+    expect(alertSpy.mock.calls[alertSpy.mock.calls.length - 1][1]).toMatch(
+      /Chênh lệch giá: \$1\.00 · Thuế ước tính: \$0\.00$/,
+    );
+    await pressAlert('Đặt lệnh');
+    await pressAlert('OK');
+    const saved = JSON.parse(
+      (await AsyncStorage.getItem(`stockline.user.${DEMO.email}`))!,
+    );
+    expect(saved.settings.costs).toEqual({
+      spreadPercent: 0.5,
+      taxPercent: 30,
+      applyToTrades: true,
+    });
+    expect(saved.portfolio.cash).toBe(99799);
+    expect(saved.portfolio.transactions[0]).toMatchObject({
+      side: 'BUY',
+      total: 200,
+      fees: 1,
+    });
   }, 20000);
 });
 

@@ -9,10 +9,11 @@ import {
   RiskRule,
 } from './risk';
 import type {DailyHistory} from '../data/types';
+import type {CostSettings} from './costs';
 import {
+  affordableShares,
   applySplit,
   executeOrder,
-  maxAffordableShares,
   Portfolio,
   Position,
   TradeReason,
@@ -23,12 +24,16 @@ import {
 // closed, so each time it opens, the runner replays every finished trading
 // day it missed, in order, and fills each automated trade at that day's
 // close. Replaying day by day means Monday's trades happen before
-// Wednesday's, as they would have in real time. The backtester (Phase 4)
-// will reuse this same loop.
+// Wednesday's, as they would have in real time. The backtester replays
+// days the same way and fills trades with the same executeOrder, so live
+// results and backtests follow the same rules.
 //
 // Each day it does, in this order:
 // 1. Risk rules: check the positions you held coming into the day.
 // 2. Recurring purchases.
+//
+// If you've turned costs on for practice trades, every trade pays the
+// spread and every sale sets aside the estimated tax.
 //
 // It's a pure function: prices come in, an updated portfolio and rules come
 // out. Downloading prices and saving results happen in automation.tsx.
@@ -53,6 +58,9 @@ export interface RunInput {
   // The day the histories were downloaded. Downloaded prices are in that
   // day's shares (see Lot in portfolio.ts).
   unitsAsOf: MarketDate;
+  // Spread and tax to charge on each trade, if you've turned them on for
+  // practice trades (see engine/costs.ts).
+  costs?: CostSettings;
 }
 
 export interface RunResult {
@@ -138,6 +146,7 @@ export const runAutomations = ({
   histories,
   through,
   unitsAsOf,
+  costs,
 }: RunInput): RunResult => {
   let current = applyKnownSplits(portfolio, histories);
   const rules = recurring.map(rule => ({...rule}));
@@ -244,6 +253,7 @@ export const runAutomations = ({
           },
           automationId: rule.id,
           unitsAsOf,
+          costs,
         });
         current = result.portfolio;
         trades.push(result.transaction);
@@ -292,8 +302,13 @@ export const runAutomations = ({
           side: 'BUY',
           symbol: rule.symbol,
           name: rule.name,
-          // Rounded down, so the cost never goes over the amount.
-          shares: maxAffordableShares(rule.amount, close),
+          // Rounded down, so the cost (with any spread) never goes over
+          // the amount.
+          shares: affordableShares(
+            rule.amount,
+            close,
+            costs?.spreadPercent ?? 0,
+          ),
           price: close,
           date: marketCloseTime(day),
           source: 'recurring',
@@ -303,6 +318,7 @@ export const runAutomations = ({
           },
           automationId: rule.id,
           unitsAsOf,
+          costs,
         });
         current = result.portfolio;
         trades.push(result.transaction);

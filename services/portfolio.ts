@@ -1,5 +1,13 @@
 import type {ChartPoint, Quote} from './marketData';
 import {MarketDate, toMarketDate} from './engine/dates';
+import {
+  CostSettings,
+  isShortTerm,
+  spreadFee,
+  taxOnSale,
+  taxYear,
+  taxYearSoFar,
+} from './engine/costs';
 import {cleanDecimalInput} from './format';
 
 // Paper trading: orders fill instantly at the given price against a virtual
@@ -75,8 +83,14 @@ export interface Transaction {
   source: TradeSource;
   reason?: TradeReason;
   automationId?: string; // the rule or bot that placed it
-  fees?: number;
+  fees?: number; // the spread (see engine/costs.ts)
+  // Estimated tax set aside from a sale. Negative when a loss gave back
+  // tax set aside earlier in the year.
   tax?: number;
+  // Sells only: the gain (or loss, negative) on the shares that had been
+  // held a year or less, after this sale's fees. Kept on every sale, even
+  // with taxes off, so turning them on mid-year nets against earlier sales.
+  shortTermGain?: number;
   unitsAsOf?: MarketDate; // see Lot; missing on trades saved before splits were tracked
 }
 
@@ -124,6 +138,10 @@ export interface OrderInput {
   automationId?: string;
   fees?: number;
   tax?: number;
+  // Spread and tax rates to charge (see engine/costs.ts). The spread is
+  // added to `fees`; the tax is worked out from the year's earlier sales,
+  // unless `tax` is given.
+  costs?: CostSettings;
   // Which day's shares the price is quoted in. Live prices are in today's
   // shares, which is the default. An automation that fills a past day at
   // that day's close passes the day the prices were downloaded, because
@@ -180,31 +198,56 @@ export const buildPosition = (
 export const maxAffordableShares = (cash: number, price: number) =>
   price > 0 ? Math.floor((cash / price) * SHARE_UNIT + 1e-6) / SHARE_UNIT : 0;
 
-// Takes `shares` from the oldest lots first. Returns what's left and how much
-// those shares had cost.
-const takeFifo = (lots: Lot[], shares: number) => {
+// What buying costs in all: the shares plus the spread.
+export const buyCost = (shares: number, price: number, spreadPercent = 0) => {
+  const total = cents(shares * price);
+  return cents(total + spreadFee(total, spreadPercent));
+};
+
+// The most shares `cash` can buy once the spread is paid too. Each amount
+// is rounded to the cent, which can add up to a cent, so if the first guess
+// goes over, it tries again with a cent less.
+export const affordableShares = (
+  cash: number,
+  price: number,
+  spreadPercent = 0,
+) => {
+  const perShare = 1 + spreadPercent / 100;
+  const shares = maxAffordableShares(cash / perShare, price);
+  return buyCost(shares, price, spreadPercent) <= cash
+    ? shares
+    : maxAffordableShares(Math.max(0, cash - 0.01) / perShare, price);
+};
+
+// Takes `shares` from the oldest lots first. Returns what's left, how much
+// those shares had cost, and how many of them (and their cost) had been
+// held a year or less on `soldOn`.
+const takeFifo = (lots: Lot[], shares: number, soldOn: MarketDate) => {
   const remaining: Lot[] = [];
   let toTake = shares;
   let cost = 0;
+  const shortTerm = {shares: 0, cost: 0};
   for (const lot of lots) {
     const taken = Math.min(lot.shares, toTake);
     toTake = roundShares(toTake - taken);
     cost += taken * lot.price;
+    if (taken > 0 && isShortTerm(toMarketDate(lot.date), soldOn)) {
+      shortTerm.shares += taken;
+      shortTerm.cost += taken * lot.price;
+    }
     const left = roundShares(lot.shares - taken);
     if (left > 0) {
       remaining.push({...lot, shares: left});
     }
   }
-  return {remaining, cost};
+  return {remaining, cost, shortTerm};
 };
 
 export const executeOrder = (
   portfolio: Portfolio,
   order: OrderInput,
 ): {portfolio: Portfolio; transaction: Transaction} => {
-  const {side, symbol, name, price} = order;
-  const fees = cents(order.fees ?? 0);
-  const tax = cents(order.tax ?? 0);
+  const {side, symbol, name, price, costs} = order;
   let shares = roundShares(order.shares);
   if (!Number.isFinite(shares) || shares <= 0) {
     throw new OrderError('INVALID_QUANTITY');
@@ -217,11 +260,16 @@ export const executeOrder = (
   const unitsAsOf = order.unitsAsOf ?? toMarketDate(date);
   const positions = {...portfolio.positions};
   const existing = positions[symbol];
+  const total = cents(shares * price);
+  const fees = cents(
+    (order.fees ?? 0) + spreadFee(total, costs?.spreadPercent ?? 0),
+  );
+  let tax = cents(order.tax ?? 0);
   let cash = portfolio.cash;
   let realizedPnL: number | undefined;
+  let shortTermGain: number | undefined;
 
   if (side === 'BUY') {
-    const total = cents(shares * price);
     if (cents(total + fees) > cash) {
       throw new OrderError('INSUFFICIENT_CASH');
     }
@@ -235,14 +283,29 @@ export const executeOrder = (
     if (!existing || shares > existing.shares) {
       throw new OrderError('INSUFFICIENT_SHARES');
     }
-    const {remaining, cost} = takeFifo(existing.lots, shares);
-    realizedPnL = cents(shares * price - cost - fees - tax);
+    const soldOn = toMarketDate(date);
+    const {remaining, cost, shortTerm} = takeFifo(
+      existing.lots,
+      shares,
+      soldOn,
+    );
+    if (shortTerm.shares > 0) {
+      // The short-term shares' part of the proceeds and the selling fees.
+      // When every share sold is short-term, this is the whole gain.
+      const part = shortTerm.shares / shares;
+      shortTermGain = cents((total - fees) * part - shortTerm.cost);
+      if (order.tax === undefined && costs?.taxPercent) {
+        const year = taxYearSoFar(portfolio.transactions, taxYear(soldOn));
+        tax = taxOnSale(year, shortTermGain, costs.taxPercent);
+      }
+    }
+    realizedPnL = cents(total - cost - fees - tax);
     if (remaining.length) {
       positions[symbol] = buildPosition(symbol, existing.name, remaining);
     } else {
       delete positions[symbol];
     }
-    cash = cents(cash + cents(shares * price) - fees - tax);
+    cash = cents(cash + total - fees - tax);
   }
 
   const transaction: Transaction = {
@@ -252,7 +315,7 @@ export const executeOrder = (
     name,
     shares,
     price,
-    total: cents(shares * price),
+    total,
     realizedPnL,
     date,
     source: order.source ?? 'manual',
@@ -270,6 +333,9 @@ export const executeOrder = (
   }
   if (tax) {
     transaction.tax = tax;
+  }
+  if (shortTermGain !== undefined) {
+    transaction.shortTermGain = shortTermGain;
   }
   // Keep the history newest first. A manual trade is always the newest, but
   // an automation catching up fills a past day's close, which may be older

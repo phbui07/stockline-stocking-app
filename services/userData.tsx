@@ -23,12 +23,16 @@ import {onQuotesUpdated, useQuotes} from './quoteStore';
 import {showNotification} from './notifications';
 import {translateNow} from './i18n';
 import {formatMoney} from './format';
+import {CostPreferences, DEFAULT_COST_PREFERENCES} from './engine/costs';
 
 // Per-user paper-trading data: portfolio, watchlist, alerts and settings.
 
 export interface UserSettings {
   biometricForTrades: boolean;
   startingCash: number;
+  // Spread and tax rates for backtests, and whether practice trades pay
+  // them too (see engine/costs.ts).
+  costs: CostPreferences;
 }
 
 export interface UserData {
@@ -44,7 +48,11 @@ export const createUserData = (now = Date.now()): UserData => ({
   portfolio: createPortfolio(DEFAULT_STARTING_CASH, now),
   watchlist: DEFAULT_WATCHLIST,
   alerts: [],
-  settings: {biometricForTrades: false, startingCash: DEFAULT_STARTING_CASH},
+  settings: {
+    biometricForTrades: false,
+    startingCash: DEFAULT_STARTING_CASH,
+    costs: DEFAULT_COST_PREFERENCES,
+  },
 });
 
 // Fills in fields added since the data was saved, and upgrades an old
@@ -54,6 +62,8 @@ export const migrateUserData = (saved: Partial<UserData>): UserData => {
   return {
     ...defaults,
     ...saved,
+    // Settings added later (like costs) get their defaults.
+    settings: {...defaults.settings, ...saved.settings},
     portfolio: saved.portfolio
       ? migratePortfolio(saved.portfolio)
       : defaults.portfolio,

@@ -54,6 +54,7 @@ const run = (
     benchmark?: DailyHistory;
     dividends?: DividendEvent[];
     from?: string;
+    costs?: {spreadPercent: number; taxPercent: number};
   } = {},
 ) =>
   runBacktest({
@@ -63,6 +64,7 @@ const run = (
     from: options.from ?? DATES[0],
     to: DATES[closes.length - 1],
     startingBalance: 1000,
+    costs: options.costs,
   })!;
 
 describe('a full run', () => {
@@ -190,6 +192,19 @@ describe('no look-ahead', () => {
     // The runs do differ afterwards (from day 6; on day 5 one buys at $50 with
     // its $750, so both accounts are still worth $750).
     expect(boom.equity[6]).not.toBe(crash.equity[6]);
+  });
+
+  it('costs can’t see the future either', () => {
+    // Tax depends on the year's other sales. Only earlier ones may count.
+    const costs = {spreadPercent: 0.5, taxPercent: 30};
+    const prices = [10, 20, 25, 30, 22, 26];
+    const boom = run([...prices, 40, 50, 20], {costs});
+    const crash = run([...prices, 8, 6, 30], {costs});
+    expect(boom.equity.slice(0, 6)).toEqual(crash.equity.slice(0, 6));
+    const upToDay5 = (r: typeof boom) =>
+      r.transactions.filter(t => t.date <= Date.parse(`${DATES[5]}T23:00Z`));
+    expect(upToDay5(boom)).toEqual(upToDay5(crash));
+    expect(upToDay5(boom).some(t => t.tax)).toBe(true); // a taxed sale
   });
 });
 

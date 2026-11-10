@@ -20,16 +20,22 @@ const moneyFormatter = (currency: string, digits: number) => {
 // Rounds away float noise so tiny negatives don't render as "-$0.00".
 const clean = (value: number) => (Math.abs(value) < 0.005 ? 0 : value);
 
+// Prices under $1 get 4 decimals ($0.1234) so penny stocks still show
+// their moves. `cents` keeps 2 for amounts that are always whole cents,
+// like a fee or a tax.
 export const formatMoney = (
   value: number,
   {
     signed = false,
     currency = 'USD',
-  }: {signed?: boolean; currency?: string} = {},
+    cents = false,
+  }: {signed?: boolean; currency?: string; cents?: boolean} = {},
 ) => {
   const amount = clean(value);
   const digits =
-    currency === 'USD' && Math.abs(amount) > 0 && Math.abs(amount) < 1 ? 4 : 2;
+    !cents && currency === 'USD' && Math.abs(amount) > 0 && Math.abs(amount) < 1
+      ? 4
+      : 2;
   const text = moneyFormatter(currency, digits).format(Math.abs(amount));
   if (amount < 0) {
     return `-${text}`;

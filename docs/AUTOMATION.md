@@ -13,7 +13,7 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
 | 2 | Automatic risk rules: stop-loss, take-profit, trailing stop | Done |
 | 3 | Strategy engine and moving-average crossover bot | Done |
 | 4 | Backtester | Done |
-| 5 | Realistic costs: slippage and short-term tax | |
+| 5 | Realistic costs: slippage and short-term tax | Done |
 | 6 | Trade log with explanations | |
 | 7 | Forward testing | |
 | 8 | Automatic rebalancing | |
@@ -31,6 +31,7 @@ Each phase ends with the tests, type check and lint passing, plus a run on the i
   - `sizing.ts`: position sizing.
   - `bots.ts`: a bot's saved settings.
   - `backtest.ts`: the backtester.
+  - `costs.ts`: the spread, holding periods and short-term tax.
   - `metrics.ts`: total and yearly return, and worst drop.
   - `runner.ts`: replays missed days in order. Each day it checks risk rules first, then makes recurring purchases. Later phases add their steps to the same loop.
 - `services/automation.tsx`: saves each user's automations (`stockline.automation.<email>`), downloads prices and calls the runner. It runs when the app opens, when it returns from the background, every 15 minutes while it's open, after a rule changes, and on "Check now".
@@ -68,7 +69,7 @@ These keep the simulation simple. Each one is a known gap from real trading.
   - Sales use the oldest lots first (FIFO, the usual US default). So realized profit is measured against the lots actually sold, not the average cost.
   - Buying fees are included in a lot's cost.
 - **Splits:** prices are always quoted in the shares that exist on the day you look. A lot remembers which day's shares it's counted in (`unitsAsOf`). After a split, `applySplit` converts older lots: 1 share at $1,000 becomes 10 shares at $100.
-- **Dividends** are not paid into the live portfolio. Backtests include them through adjusted prices.
+- **Dividends** are not paid into the live portfolio. Backtests reinvest them (see Phase 4).
 
 ## Recurring investments (Phase 1)
 
@@ -106,7 +107,7 @@ These keep the simulation simple. Each one is a known gap from real trading.
 
 ## Strategy engine and bots (Phase 3)
 
-- **A strategy** gets the price history up to and including the current day, plus whether it holds the stock, and returns BUY, SELL or HOLD with a reason. Callers pass `history.slice(0, i + 1)`, so later prices can't reach it. A test checks the strategy only ever sees `i + 1` bars, and another checks that changing later prices doesn't change earlier signals.
+- **A strategy** gets the price history up to and including the current day, plus whether it holds the stock, and returns BUY, SELL or HOLD with a reason. Callers pass `historyUpTo(bars, i, warmupBars)`, the most recent days ending today, so later prices can't reach it. One test checks that the strategy only ever sees days up to the one it decides; another checks that changing later prices doesn't change earlier signals.
 - **Moving-average crossover:**
   - **Fast and slow lines:** the fast line is the close ("price" mode) or a short average ("cross" mode). The slow line is a longer average.
   - **State rule:** it's in the market while fast > slow. So starting mid-trend buys on the first day, rather than waiting for the next cross.
@@ -140,7 +141,7 @@ These keep the simulation simple. Each one is a known gap from real trading.
 - **Sizing:** risk-based (see Phase 3), using the account's cash, which is its whole value while it's out of the market.
 - **Benchmarks:** buy-and-hold of the same stock and SPY are measured the same way, with everything invested at the first close and dividends reinvested at each ex-date's close. When the bot trades SPY, holding SPY *is* the index comparison, so there's no separate SPY column.
 - **Cash** earns 0%.
-- **Not included:** fees, spreads and taxes (Phase 5).
+- **Costs:** see Phase 5.
 
 **Warm-up:** prices are downloaded from about 1.6 × `warmupBars` calendar days before the start date, so a 200-day average exists on day one.
 
@@ -163,6 +164,53 @@ These keep the simulation simple. Each one is a known gap from real trading.
 
 **Checked against real data:** a 10-year SPY 20/50 backtest matches an independent script, written separately and sharing no app code, to the cent.
 
+## Realistic costs (Phase 5)
+
+**Settings** (Automate → Costs and taxes, or "Change costs" on a backtest), saved per user in `settings.costs`:
+- **Spread and slippage per trade**, default 0.1%. Every buy fills that much above the price and every sale that much below. It's recorded as the trade's `fees`, so `price` stays the market price and the cost shows separately. Bought shares include it in their cost.
+- **Tax on short-term gains**, default 24%. Gains on shares held a year or less are taxed at this rate.
+- **Apply to my practice trades**, default off. When on, manual trades, recurring buys and risk-rule sales pay both. Backtests always use the rates.
+
+The defaults are cautious on purpose, so results don't look better than real life: big US stocks and ETFs usually cost 0.01–0.05% per trade, and 24% is a middle US federal bracket.
+
+**How the tax works** (`engine/costs.ts`, the usual US method):
+- **Holding period:** a lot is short-term if it's sold on or before the same date a year later (held "a year or less"). A sale can mix lots: only the short-term lots count, oldest sold first.
+- **Netting:** gains and losses from short-term sales in the same calendar year net out. A net loss for the year carries forward to later years.
+- **When it's paid:** tax is set aside from each sale's proceeds. If a later sale in the same year loses money, tax comes back, but never more than was set aside that year. So by the end of each year, the total set aside equals the rate × that year's net gain above any carried losses.
+- **Nothing extra is saved:** each sale records its `shortTermGain` (even with taxes off) and its `tax`. `taxYearSoFar` rebuilds the year from those, so turning taxes on mid-year still nets against earlier sales.
+- **Not modeled:**
+  - long-term rates (shares held over a year aren't taxed here, and their losses don't count);
+  - tax on dividends;
+  - the wash-sale rule (it postpones a loss when you rebuy within 30 days);
+  - the $3,000 of losses a year that can offset other income.
+
+**Backtests with costs:**
+- **The bot:** every trade pays the spread and every sale sets aside tax.
+- **Buy-and-hold and SPY:** they pay the spread once, on their first purchase, and never sell, so they owe no tax.
+- **End of the test:** shares still held are valued at the last close, with no selling costs, on all three lines.
+- **Dividends:** reinvested dividends pay no spread.
+- **Returns:** measured from the starting balance, so the first purchase's spread counts.
+- **Side by side:** the screen runs the same test twice, without and with costs. The results table, charts and trades show the version with costs; a "With and without costs" card shows both, and the account-value chart adds a faint line for the bot before costs.
+- **Costs can very rarely raise a result:** tax set aside after a gain isn't invested, so if the next trade loses, it loses on a smaller amount, and the tax comes back. The screen explains this when it happens.
+
+**Tests (`__tests__/costs.test.ts`):** every number is worked out by hand:
+- the spread and rounding to the cent;
+- holding periods, including a sale that mixes short- and long-term lots;
+- netting within a year, refunds and their limit, and carrying losses across years;
+- a recurring buy and a take-profit sale paying costs;
+- two full backtests, one with spread only and one with tax only.
+
+`backtest.test.ts` also checks that costs can't see the future: two price series that differ only after day 5 give the same trades and taxes through day 5.
+
+**Checked against real data:** a 10-year SPY 20/50 backtest with the default costs matches an independent script, written separately and sharing no app code. Both give:
+
+| | Before costs | After costs |
+|---|---|---|
+| The bot | +124.45% | +85.62% |
+| Holding SPY | +304.21% | +303.81% |
+
+The bot paid $583.59 in spread and $2,187.54 in tax over 21 trades. The script differs by a cent, from rounding shares.
+
 ## Saved-data versions
 
-`Portfolio.version` is 2. Version 1, from before lots existed, stored each position as total shares plus an average cost. `migratePortfolio` turns each old position into one lot dated at its first purchase, and marks old trades as manual. The upgrade runs every time saved data is loaded, and the new format is written the next time anything changes.
+`Portfolio.version` is 2. Fields added since then are optional, so they need no version bump: `shortTermGain` on sales, and `settings.costs`, which `migrateUserData` fills with the defaults. Version 1, from before lots existed, stored each position as total shares plus an average cost. `migratePortfolio` turns each old position into one lot dated at its first purchase, and marks old trades as manual. The upgrade runs every time saved data is loaded, and the new format is written the next time anything changes.

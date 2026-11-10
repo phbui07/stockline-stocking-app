@@ -26,6 +26,7 @@ import {
 } from './engine/recurring';
 import {createRiskRule, RiskKind, RiskRule} from './engine/risk';
 import {Bot, BotInput, createBot} from './engine/bots';
+import {tradeCosts} from './engine/costs';
 import {
   AutomationEvent,
   priceRequests,
@@ -202,6 +203,7 @@ export const AutomationProvider: React.FC<{children: React.ReactNode}> = ({
           histories,
           through,
           unitsAsOf: toMarketDate(now),
+          costs: tradeCosts(userDataRef.current.data.settings.costs),
         });
         return result.portfolio;
       });

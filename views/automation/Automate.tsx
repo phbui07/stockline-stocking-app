@@ -11,6 +11,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {container, vh, vw} from '../../services/styleSheet';
 import {useAutomation} from '../../services/automation';
+import {useUserData} from '../../services/userData';
 import {useI18n} from '../../services/i18n';
 import {
   formatDateTime,
@@ -34,6 +35,7 @@ const Automate = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const {t, lang} = useI18n();
   const {data, running, runNow} = useAutomation();
+  const costs = useUserData().data.settings.costs;
   const {lastRun} = data;
   // Active risk rules grouped by stock, and the few most recent sales.
   const activeRisk = data.risk.filter(rule => rule.status === 'active');
@@ -127,6 +129,29 @@ const Automate = () => {
             />
           ))
         )}
+
+        <Text style={[styles.sectionTitle, styles.sectionGap]}>
+          {t('costs.title')}
+        </Text>
+        <Text style={styles.explain}>{t('costs.hubExplain')}</Text>
+        <TouchableOpacity
+          testID="costs-card"
+          style={styles.card}
+          onPress={() => navigation.navigate('Costs')}>
+          <View style={styles.cardText}>
+            <Text style={styles.cardTitle}>
+              {costs.spreadPercent || costs.taxPercent
+                ? t('costs.summary', {
+                    spread: costs.spreadPercent,
+                    tax: costs.taxPercent,
+                  })
+                : t('costs.summaryNone')}
+            </Text>
+            <Text style={styles.grey}>
+              {t(costs.applyToTrades ? 'costs.tradesOn' : 'costs.tradesOff')}
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.statusCard}>
           <Text testID="automate-status" style={styles.grey}>

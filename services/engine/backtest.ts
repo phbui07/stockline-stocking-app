@@ -8,6 +8,7 @@ import {
   TradeReason,
   Transaction,
 } from '../portfolio';
+import type {CostSettings} from './costs';
 import {crossesLine, RISK_KINDS, riskLine} from './risk';
 import {BotInput, stopDistance} from './bots';
 import {getStrategy} from './strategies';
@@ -37,6 +38,13 @@ import {annualReturn, Drawdown, maxDrawdown, totalReturn} from './metrics';
 // Buy-and-hold and the index benchmark are measured the same way: everything
 // invested at the first close, with dividends reinvested at each ex-date's
 // close. Cash earns nothing.
+//
+// Costs (optional, see engine/costs.ts): every bot trade pays the spread,
+// and every sale sets aside the estimated short-term tax. Buy-and-hold and
+// the index pay the spread once, on their first purchase, and never sell,
+// so they owe no tax. Shares still held at the end are valued at the last
+// close, with no selling costs, for all three lines alike. Reinvested
+// dividends pay no spread, as with most brokers' reinvestment plans.
 
 export interface BacktestInput {
   bot: BotInput;
@@ -47,6 +55,7 @@ export interface BacktestInput {
   from: MarketDate;
   to: MarketDate;
   startingBalance: number;
+  costs?: CostSettings;
 }
 
 // One round trip: a buy and the sale that closed it.
@@ -54,16 +63,21 @@ export interface BacktestTrade {
   entryIndex: number; // position in BacktestResult.dates
   entryDate: MarketDate;
   entryPrice: number;
-  cost: number;
+  cost: number; // including the spread
   shares: number; // including shares bought with dividends
   entryReason: TradeReason;
   exitIndex?: number;
   exitDate?: MarketDate;
   exitPrice?: number;
-  proceeds?: number;
+  proceeds?: number; // after the spread, before tax
   exitReason?: TradeReason;
+  fees: number; // the spread paid on the buy and the sale
+  tax?: number; // set aside from the sale (negative: given back)
   open: boolean; // still held at the end
-  returnPercent: number; // an open trade is valued at the last close
+  // After the spread, before tax. Tax depends on the whole year's sales,
+  // so it's counted for the account, not per trade. An open trade is
+  // valued at the last close.
+  returnPercent: number;
 }
 
 export interface LineStats {
@@ -95,6 +109,8 @@ export interface BacktestResult {
     wins: number;
     winRate?: number; // percent of closed trades that made money
     exposure: number; // percent of days it held the stock
+    spreadPaid: number;
+    taxPaid: number; // net of refunds
   };
 }
 
@@ -127,6 +143,7 @@ export const buyAndHold = (
   dates: MarketDate[],
   history: DailyHistory,
   amount: number,
+  spreadPercent = 0,
 ): number[] => {
   const dividends = new Map<MarketDate, number>();
   history.dividends.forEach(d =>
@@ -146,25 +163,35 @@ export const buyAndHold = (
       }
     }
     if (day === 0) {
-      shares = price ? amount / price : 0;
+      // The first purchase pays the spread: $1,000 at 0.1% buys $999.00
+      // worth of shares, rounded.
+      shares = price ? amount / (price * (1 + spreadPercent / 100)) : 0;
     }
     return shares * (price ?? 0);
   });
 };
 
+// Returns are measured from the money put in, not from the first close's
+// value: with a spread, a line that buys on day one is already worth a
+// little less than it started with, and that cost has to count.
 const lineStats = (
   values: number[],
+  startingBalance: number,
   from: MarketDate,
   to: MarketDate,
-): LineStats => ({
-  finalValue: values[values.length - 1],
-  totalReturn: totalReturn(values[0], values[values.length - 1]),
-  annualReturn: annualReturn(values[0], values[values.length - 1], from, to),
-  maxDrawdown: maxDrawdown(values),
-});
+): LineStats => {
+  const finalValue = values[values.length - 1];
+  return {
+    finalValue,
+    totalReturn: totalReturn(startingBalance, finalValue),
+    annualReturn: annualReturn(startingBalance, finalValue, from, to),
+    maxDrawdown: maxDrawdown(values),
+  };
+};
 
 export const runBacktest = (input: BacktestInput): BacktestResult | null => {
-  const {bot, history, benchmark, to, startingBalance} = input;
+  const {bot, history, benchmark, to, startingBalance, costs} = input;
+  const spread = costs?.spreadPercent ?? 0;
   const strategy = getStrategy(bot.strategy);
   const warmup = strategy.warmupBars(bot.settings);
   const bars = history.bars.filter(bar => bar.date <= to);
@@ -217,6 +244,8 @@ export const runBacktest = (input: BacktestInput): BacktestResult | null => {
       source,
       reason,
       unitsAsOf: to,
+      // Reinvested dividends pay no spread.
+      costs: source === 'dividend' ? undefined : costs,
     });
     portfolio = result.portfolio;
     return result.transaction;
@@ -230,14 +259,17 @@ export const runBacktest = (input: BacktestInput): BacktestResult | null => {
       reason,
       'bot',
     );
+    const proceeds = cents(sale.total - (sale.fees ?? 0));
     Object.assign(trade!, {
       exitIndex: i - start,
       exitDate: bars[i].date,
       exitPrice: bars[i].close,
-      proceeds: sale.total,
+      proceeds,
       exitReason: reason,
+      fees: cents(trade!.fees + (sale.fees ?? 0)),
+      tax: sale.tax,
       open: false,
-      returnPercent: totalReturn(trade!.cost, sale.total),
+      returnPercent: totalReturn(trade!.cost, proceeds),
     });
     trades.push(trade!);
     trade = undefined;
@@ -305,6 +337,7 @@ export const runBacktest = (input: BacktestInput): BacktestResult | null => {
             stopPercent: stop,
           },
           close,
+          spread,
         );
         if (shares > 0) {
           const buy = order('BUY', shares, i, decision.reason, 'bot');
@@ -313,9 +346,10 @@ export const runBacktest = (input: BacktestInput): BacktestResult | null => {
             entryIndex: i - start,
             entryDate: date,
             entryPrice: close,
-            cost: buy.total,
+            cost: cents(buy.total + (buy.fees ?? 0)),
             shares,
             entryReason: decision.reason,
+            fees: buy.fees ?? 0,
             open: true,
             returnPercent: 0,
           };
@@ -338,10 +372,13 @@ export const runBacktest = (input: BacktestInput): BacktestResult | null => {
     trades.push(trade);
   }
 
-  const buyHold = buyAndHold(dates, history, startingBalance);
+  const buyHold = buyAndHold(dates, history, startingBalance, spread);
   const benchmarkValues = benchmark
-    ? buyAndHold(dates, benchmark, startingBalance)
+    ? buyAndHold(dates, benchmark, startingBalance, spread)
     : undefined;
+  const transactions = [...portfolio.transactions].reverse();
+  const totalOf = (field: 'fees' | 'tax') =>
+    cents(transactions.reduce((total, t) => total + (t[field] ?? 0), 0));
   const closed = trades.filter(t => !t.open);
   const wins = closed.filter(t => (t.proceeds ?? 0) > t.cost).length;
   const first = dates[0];
@@ -361,18 +398,20 @@ export const runBacktest = (input: BacktestInput): BacktestResult | null => {
     buyHold,
     benchmark: benchmarkValues,
     trades,
-    transactions: [...portfolio.transactions].reverse(),
+    transactions,
     stats: {
-      strategy: lineStats(equity, first, last),
-      buyHold: lineStats(buyHold, first, last),
+      strategy: lineStats(equity, startingBalance, first, last),
+      buyHold: lineStats(buyHold, startingBalance, first, last),
       benchmark: benchmarkValues
-        ? lineStats(benchmarkValues, first, last)
+        ? lineStats(benchmarkValues, startingBalance, first, last)
         : undefined,
       closedTrades: closed.length,
       openTrades: trades.length - closed.length,
       wins,
       winRate: closed.length ? (wins / closed.length) * 100 : undefined,
       exposure: (daysHolding / dates.length) * 100,
+      spreadPaid: totalOf('fees'),
+      taxPaid: totalOf('tax'),
     },
   };
 };

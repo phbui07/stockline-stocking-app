@@ -1,4 +1,4 @@
-import {maxAffordableShares} from '../portfolio';
+import {affordableShares} from '../portfolio';
 
 // Position sizing: "risk at most X% of the account per trade".
 //
@@ -37,5 +37,10 @@ export const positionBudget = ({
   return Math.max(0, Math.min(budget, cash));
 };
 
-export const positionShares = (input: SizingInput, price: number) =>
-  maxAffordableShares(positionBudget(input), price);
+// The shares the budget buys. With a spread, the budget has to cover it
+// too, so the position is a little smaller.
+export const positionShares = (
+  input: SizingInput,
+  price: number,
+  spreadPercent = 0,
+) => affordableShares(positionBudget(input), price, spreadPercent);

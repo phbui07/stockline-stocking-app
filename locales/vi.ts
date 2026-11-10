@@ -746,9 +746,65 @@ const vi = {
   'backtest.tradeOpen': 'đang giữ',
   'backtest.showAll': 'Xem tất cả {count}',
   'backtest.assumptions':
-    'Kết quả giả định dựa trên giá quá khứ. Lệnh khớp ở giá đóng cửa mỗi ngày, cổ tức được tái đầu tư ở cả ba đường, và tiền mặt không sinh lãi. Chưa tính phí, chênh lệch giá hay thuế. Kết quả quá khứ không dự báo tương lai.',
+    'Kết quả giả định dựa trên giá quá khứ. Lệnh khớp ở giá đóng cửa mỗi ngày, cổ tức được tái đầu tư ở cả ba đường, và tiền mặt không sinh lãi. Khi tính chi phí, mỗi giao dịch của bot trả chênh lệch giá và mỗi lệnh bán trích thuế ước tính trên lãi từ cổ phiếu giữ một năm trở xuống; việc giữ cổ phiếu và SPY trả chênh lệch giá một lần khi mua. Cổ phiếu còn giữ đến cuối được tính theo giá đóng cửa cuối cùng. Kết quả quá khứ không dự báo tương lai.',
   'bot.saveAndBacktest': 'Lưu và kiểm thử',
   'reason.dividendReinvest': 'Tái đầu tư cổ tức {total}',
+  // Costs (Phase 5)
+  'costs.title': 'Chi phí và thuế',
+  'costs.intro':
+    'Giao dịch thật tốn nhiều hơn mức giá bạn thấy. Đặt các mức này để xem kết quả của một chiến lược thay đổi bao nhiêu.',
+  'costs.spread': 'Chênh lệch giá và trượt giá mỗi giao dịch (%)',
+  'costs.spreadHint':
+    'Mỗi lệnh mua khớp cao hơn giá một khoảng như vậy, mỗi lệnh bán thấp hơn một khoảng như vậy. Cổ phiếu lớn và ETF ở Mỹ thường tốn khoảng 0,01–0,05%; cổ phiếu nhỏ hoặc ít được giao dịch tốn nhiều hơn.',
+  'costs.spreadExample': 'Với giao dịch {amount}: {cost}',
+  'costs.tax': 'Thuế trên lãi ngắn hạn (%)',
+  'costs.taxHint':
+    'Ở Mỹ, lãi từ cổ phiếu giữ một năm trở xuống bị đánh thuế như thu nhập: 10–37% thuế liên bang, cộng thuế tiểu bang nếu có. Lãi và lỗ trong cùng năm được bù trừ, và khoản lỗ ròng được chuyển sang các năm sau. Cổ phiếu giữ lâu hơn không bị tính thuế ở đây.',
+  'costs.taxExample': 'Với khoản lãi ngắn hạn {amount}: {cost}',
+  'costs.apply': 'Áp dụng cho các giao dịch ảo của tôi',
+  'costs.applyHint':
+    'Lệnh bạn tự đặt, lệnh mua định kỳ và lệnh bán theo quy tắc rủi ro sẽ trả chênh lệch giá, và lệnh bán sẽ trích thuế ước tính từ tiền mặt của bạn. Kiểm thử quá khứ luôn hiện kết quả có và không có chi phí.',
+  'costs.notAdvice':
+    'Chỉ là ước tính để học, không phải tư vấn thuế. Thuế suất thật của bạn phụ thuộc vào thu nhập và nơi bạn sống.',
+  'costs.errorSpread': 'Chênh lệch giá phải từ {min}% đến {max}%.',
+  'costs.errorTax': 'Thuế phải từ {min}% đến {max}%.',
+  'costs.summary':
+    'Chênh lệch {spread}% mỗi giao dịch · thuế {tax}% trên lãi ngắn hạn',
+  'costs.summaryNone': 'Không tính chênh lệch giá hay thuế',
+  'costs.tradesOn': 'Các giao dịch ảo của bạn có tính các chi phí này.',
+  'costs.tradesOff':
+    'Chỉ kiểm thử quá khứ dùng các mức này; giao dịch ảo của bạn thì không.',
+  'costs.hubExplain':
+    'Chênh lệch giá và thuế ước tính, dùng trong kiểm thử quá khứ và, nếu bạn chọn, trong các giao dịch ảo của bạn.',
+  'backtest.costsLine':
+    'Chi phí: chênh lệch {spread}% mỗi giao dịch, thuế {tax}% trên lãi ngắn hạn.',
+  'backtest.costsNone':
+    'Chi phí: không có. Đặt chênh lệch giá hoặc thuế để so sánh.',
+  'backtest.editCosts': 'Thay đổi chi phí',
+  'backtest.afterCosts':
+    'Các kết quả này đã tính chi phí. Phần so sánh ở bên dưới.',
+  'backtest.compareTitle': 'Có và không có chi phí',
+  'backtest.colWithout': 'Không chi phí',
+  'backtest.colWith': 'Có chi phí',
+  'backtest.costsPaid':
+    'Bot đã trả {spread} chênh lệch giá cho {trades} giao dịch và trích {tax} thuế ước tính.',
+  'backtest.costsLower':
+    'Khi có chi phí, giá trị cuối của bot thấp hơn {amount}.',
+  'backtest.costsHigher':
+    'Khi có chi phí, giá trị cuối của bot cao hơn {amount}: tiền thuế trích ra sau một lần lãi khiến ít tiền được đầu tư hơn trước một lần lỗ.',
+  'backtest.legendBeforeCosts': 'Bot này, trước chi phí',
+  'backtest.tradeSpread': 'Chênh lệch {amount}',
+  'backtest.tradeTax': 'thuế {amount}',
+  'backtest.tradeTaxBack': 'hoàn thuế {amount}',
+  'order.spread': 'Chênh lệch giá ({percent}%)',
+  'order.estimatedTax': 'Thuế ước tính ({percent}%)',
+  'order.taxBack': 'Hoàn thuế',
+  'order.confirmCosts': 'Chênh lệch giá: {spread} · Thuế ước tính: {tax}',
+  'order.costsOn':
+    'Đang tính chi phí: giao dịch trả chênh lệch {spread}% và lệnh bán trích {tax}% thuế trên lãi ngắn hạn.',
+  'trade.spread': 'Chênh lệch giá:',
+  'trade.tax': 'Thuế ước tính:',
+  'trade.taxBack': 'Hoàn thuế:',
 };
 
 export default vi;

@@ -16,12 +16,15 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {getCachedQuote, useQuote} from '../../services/quoteStore';
 import {useUserData} from '../../services/userData';
 import {
+  affordableShares,
+  buyCost,
   cleanSharesInput,
-  maxAffordableShares,
+  executeOrder,
   OrderError,
   sharesToInput,
   TradeSide,
 } from '../../services/portfolio';
+import {spreadFee, tradeCosts} from '../../services/engine/costs';
 import {isTradable} from '../../services/marketData';
 import BiometricAuth from '../../services/biometricAuth';
 import {TKey, useI18n} from '../../services/i18n';
@@ -57,15 +60,44 @@ const BuyingVerify = () => {
   const price = quote?.price ?? 0;
   const total = Number.isFinite(shares) ? shares * price : 0;
   const cash = data.portfolio.cash;
-  const maxShares = side === 'BUY' ? maxAffordableShares(cash, price) : owned;
-  const cashAfter = side === 'BUY' ? cash - total : cash + total;
+  // Spread and estimated tax, if you've turned them on (Automate → Costs).
+  const costs = tradeCosts(data.settings.costs);
+  // Trying the order on a copy shows its exact spread, tax and cash after,
+  // worked out the same way as the real order. executeOrder doesn't change
+  // the portfolio it's given.
+  const preview = (() => {
+    if (!quote || !(shares > 0)) {
+      return null;
+    }
+    try {
+      return executeOrder(data.portfolio, {
+        side,
+        symbol,
+        name: quote.name,
+        shares,
+        price,
+        costs,
+      });
+    } catch {
+      return null;
+    }
+  })();
+  const spread = costs?.spreadPercent ?? 0;
+  // Without a preview (say, too little cash), the spread is still shown.
+  const fees = preview?.transaction.fees ?? spreadFee(total, spread);
+  const tax = preview?.transaction.tax ?? 0;
+  const maxShares =
+    side === 'BUY' ? affordableShares(cash, price, spread) : owned;
+  const cashAfter =
+    preview?.portfolio.cash ??
+    (side === 'BUY' ? cash - total - fees : cash + total - fees - tax);
   const sideLabel = t(side === 'BUY' ? 'trade.buy' : 'trade.sell');
 
   const problem: TKey | null = !quote
     ? 'order.priceUnavailable'
     : !(shares > 0)
     ? 'order.invalidQuantity'
-    : side === 'BUY' && total > cash
+    : side === 'BUY' && buyCost(shares, price, spread) > cash
     ? 'order.insufficientCash'
     : side === 'SELL' && shares > owned
     ? 'order.insufficientShares'
@@ -87,6 +119,7 @@ const BuyingVerify = () => {
         name: latest.name,
         shares,
         price: latest.price,
+        costs,
       });
       Alert.alert(
         t('common.success'),
@@ -134,7 +167,13 @@ const BuyingVerify = () => {
         symbol,
         price: formatMoney(price),
         total: formatMoney(total),
-      }),
+      }) +
+        (costs
+          ? `\n${t('order.confirmCosts', {
+              spread: formatMoney(fees, {cents: true}),
+              tax: formatMoney(tax, {cents: true}),
+            })}`
+          : ''),
       [
         {text: t('common.cancel'), style: 'cancel'},
         {text: t('order.place'), onPress: execute},
@@ -142,10 +181,29 @@ const BuyingVerify = () => {
     );
   };
 
+  const costRows: [string, string, string?][] = costs
+    ? [
+        [
+          t('order.spread', {percent: costs.spreadPercent}),
+          formatMoney(fees, {cents: true}),
+        ],
+        ...(side === 'SELL' && tax
+          ? [
+              [
+                tax > 0
+                  ? t('order.estimatedTax', {percent: costs.taxPercent})
+                  : t('order.taxBack'),
+                formatMoney(Math.abs(tax), {cents: true}),
+              ] as [string, string],
+            ]
+          : []),
+      ]
+    : [];
   const rows: [string, string, string?][] = [
     [t('order.marketPrice'), quote ? formatMoney(price) : '—'],
     [t('order.quantity'), quantityText || '0'],
     [t('order.estimatedTotal'), formatMoney(total), '#FFED4B'],
+    ...costRows,
     side === 'BUY'
       ? [t('order.cashAvailable'), formatMoney(cash)]
       : [t('order.sharesOwned'), formatShares(owned)],
@@ -243,7 +301,16 @@ const BuyingVerify = () => {
           {problem && quantityText ? (
             <Text style={styles.problemText}>{t(problem)}</Text>
           ) : null}
-          <SimulatedBanner detail={t('order.disclaimer')} />
+          <SimulatedBanner
+            detail={
+              costs
+                ? `${t('order.disclaimer')} ${t('order.costsOn', {
+                    spread: costs.spreadPercent,
+                    tax: costs.taxPercent,
+                  })}`
+                : t('order.disclaimer')
+            }
+          />
           {quote && !isTradable(quote) ? (
             <Text style={styles.problemText}>{t('detail.notTradable')}</Text>
           ) : (

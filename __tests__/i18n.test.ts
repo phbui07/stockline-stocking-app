@@ -25,6 +25,7 @@ it('formats money and percentages', () => {
   expect(formatMoney(5, {signed: true})).toBe('+$5.00');
   expect(formatMoney(-0.001, {signed: true})).toBe('$0.00');
   expect(formatMoney(0.1234)).toBe('$0.1234');
+  expect(formatMoney(0.35, {cents: true})).toBe('$0.35'); // a fee
   expect(formatPercent(1.234)).toBe('+1.23%');
   expect(formatPercent(-0.5)).toBe('-0.50%');
   expect(formatCompact(5.07e12)).toBe('5.07T');
